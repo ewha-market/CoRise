@@ -9,6 +9,7 @@
       href="{{ url_for('static', filename='style.css') }}"
     />
     <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+    {% block head %}{% endblock head %}
   </head>
   <body>
     <nav class="navbar">
