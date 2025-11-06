@@ -26,15 +26,12 @@ def item_detail():
 @application.route("/submit/item")
 def reg_item_submit():
     name = request.args.get("name")
-    seller = request.args.get("seller")
+    cost = request.args.get("cost")
     addr = request.args.get("addr")
-    email = request.args.get("email")
     category = request.args.get("category")
-    card = request.args.get("card")
-    status = request.args.get("status")
-    phone = request.args.get("phone")
+    description = request.args.get("description")
 
-    print(name, seller, addr, email, category, card, status, phone)
+    print(name, cost, addr, category, description)
     return render_template("reg_item.html")
 
 @application.route("/submit_item_post", methods=['POST'])

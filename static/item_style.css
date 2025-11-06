@@ -3,8 +3,8 @@
 /*필터*/
 .filters{
   /* 캡슐의 폭/정렬 */
-  width: 1283px;              /* 시안 폭 */
-  margin: 1.5rem auto 1.5rem;     /* 가운데 정렬 */
+  width: 1283px;             
+  margin: 1.5rem auto 1.5rem;    
   /*배치*/
   display: flex;
   align-items: center;
@@ -208,17 +208,16 @@
   color: var(--dark-green);
 }
 
-/*----------------------------------------------------*/
+/*-----------------상품 등록-------------------*/
 
-/*상품 등록*/
 .product-create{ 
   padding-top: 20px;  
   padding-bottom: 40px;
 }
 
 .pc-container{ 
-  max-width: 761px;          /* ← 원하는 폭으로 조절 (예: 560~720px) */
-  margin: 0 auto;            /* 가운데 정렬 */
+  max-width: 761px;        
+  margin: 0 auto;           
   padding: 0 16px;
 }
 
@@ -226,22 +225,20 @@
   color: #000;
   text-align: center;
   font-family: Pretendard;
-  font-size: 35px;
+  font-size: 40px;
   font-style: normal;
   font-weight: 400;
-  padding: 0;
-  margin: 1rem;
+  line-height: 150%; 
  }
 
  .pc-divider {
-  position: relative;       /* 위치 기준 */
-  left: 50%;                /* 화면의 가운데로 이동 */
+  position: relative;      
+  left: 50%;               
   transform: translateX(-50%);
   width: 960.005px;
   height: 1px;
   background: #000;
-  margin: 1rem 0;
-  margin-bottom: 2rem;
+  margin: 40px 0;
 }
 
 .pc-card{
@@ -249,24 +246,23 @@
   border: none;
   box-shadow: none;
   padding: 0;
-  margin-top: 20px;
 }
 
 .pc-form
 .pc-field{
   display:grid; 
   grid-template-columns: 88px 1fr;
-  gap:20px; 
+  gap:16px; 
   align-items: center; 
-  margin-bottom:1.5rem;
+  margin-bottom:18px;
 }
 
 .pc-field2{
   display:grid; 
   grid-template-columns: 88px 1fr;
-  gap:20px; 
+  gap:16px; 
   align-items: start; 
-  margin-bottom:15px;
+  margin-bottom:18px;
 }
 
 
@@ -274,7 +270,7 @@
   padding-top:10px; 
   color: var(--text, #010104);
   font-family: Pretendard;
-  font-size: 18px;
+  font-size: 20px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
@@ -283,8 +279,8 @@
 
 /* 공통 입력 */
 .pc-input{
-  width: 220px;
-  height: 32px;
+  width: 240px;
+  height: 42px;
   padding: 10px 14px;
   align-items: center;
   flex-shrink: 0;
@@ -292,7 +288,7 @@
   color:#1e1e1e;
   border:1px solid #000; 
   border-radius:12px;
-  font-size:15px; 
+  font-size:18px; 
   outline:none;
   box-sizing: border-box; 
 }
@@ -322,8 +318,8 @@ input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   -moz-appearance: none;
   width: 100%;
-  height: 30px;
-  padding: 0rem 2rem 0rem 2em;  
+  height: 42px;
+  padding: 10px 40px 10px 24px;  
   border: 1px solid #000;
   border-radius: 12px;
   background-color: #fff;
@@ -360,11 +356,11 @@ input::-webkit-inner-spin-button {
   user-select:none;
   background:#fff; 
   border:1px solid #000;
-  padding:5px 10px; 
+  padding:8px 14px; 
   border-radius:10px; 
   color: var(--text, #010104);
-  font-family: "Pretendard";
-  font-size: 15px;
+  font-family: Pretendard;
+  font-size: 18px;
   font-style: normal;
   font-weight: 400;
   line-height: normal;
@@ -384,7 +380,7 @@ input::-webkit-inner-spin-button {
 .pc-thumb-grid{ 
   margin-top:10px; 
   display:grid; 
-  grid-template-columns: repeat(5, 50px);
+  grid-template-columns:repeat(5,1fr); 
   gap:10px; }
   
 .pc-thumb{
@@ -396,21 +392,25 @@ input::-webkit-inner-spin-button {
   align-items:center; 
   justify-content:center;
   color:rgba(0,0,0,.45); 
-  font-size:7px;
+  font-size:12px;
 }
 
 /* 텍스트 영역 */
 .pc-textarea{ 
+  font-family: Pretendard;
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
   resize:vertical; 
-  min-height: 120px;     
-  height: 120px;  
+  min-height: 165px;     
+  height: 165px;  
 }
 
 /* 제출 버튼 */
 .pc-actions{ 
   display:flex; 
   justify-content:center; 
-  margin-top: 2.5rem; 
+  margin-top: 46px; 
 }
 
 .pc-submit {
@@ -418,14 +418,13 @@ input::-webkit-inner-spin-button {
   justify-content: center;
   align-items: center;
 
-  width: 151px;          /* Figma 기준 크기 */
-  height: 45px;
-  background: #214520;   /* 짙은 초록색 */
-  color: #FFFFFF;        /* 글자색 흰색 */
+  width: 151px;         
+  height: 53px;
+  background: #214520;  
+  color: #FFFFFF;       
 
-  /* 글씨 스타일 */
   font-family: Pretendard, sans-serif;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 400;
   font-style: normal;
   line-height: normal;
@@ -437,12 +436,10 @@ input::-webkit-inner-spin-button {
 
 .pc-submit:hover{ opacity:.92; }
 
-/* 반응형 */
 @media (max-width: 520px){
   .pc-field{ grid-template-columns:1fr; }
   .pc-thumb-grid{ grid-template-columns:repeat(3,1fr); }
 }
-
 
 /*--------------------------------------------*/
 :root{
@@ -631,12 +628,14 @@ input::-webkit-inner-spin-button {
   line-height: 150%;
   background: var(--mint-green, #CDE4D3); /* 기본(리뷰) 색 */
   color: #111;
+  cursor: pointer;
 }
 
 .btn.primary{
   background: var(--dark-green, #21452D);
   color: #FBFAF4;
   border-color: transparent;
+  cursor: pointer;
 }
 
 /* 6) 우측 메타 영역 하단 맞춤 (왼쪽 이미지 높이=350px) */

@@ -7,30 +7,35 @@
   <link rel="stylesheet"  href="{{ url_for('static', filename='style.css') }}">
   {% block head %} {% endblock head %}
 </head>
-<body>
-    <header class="header">
-        <nav class="header-nav">
-            <a href="#" class="header-logo">CoRise</a>
 
-            <!-- API 완성될 때 href 수정 -->
-            <ul class="header-nav-menu">
-              <li><a href="/items" class="nav-style">전체 상품</a></li>
-              <li><a href="/item_post" class="nav-style">상품 등록</a></li>
-              <li><a href="/reviews" class="nav-style">전체 리뷰</a></li>
-              <li><a href="/mypage" class="nav-style">마이페이지</a></li>
-            </ul>
+  <body>
+    <nav class="navbar">
+      <div class="navbar_logo">
+        <a href="">CoRise</a>
+      </div>
+      <ul class="navbar_menu">
+        <li><a href="/list">전체 상품</a></li>
+        <li><a href="/reg_items">상품 등록</a></li>
+        <li><a href="/reg_reviews">리뷰 등록</a></li>
+        <li><a href="/mypage">마이페이지</a></li>
+      </ul>
 
-            <button class="header-icon-btn" aria-label="로그아웃" onclick="location.href='/log_in'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30" fill="none">
-                <path d="M11.25 26.25H6.25C5.58696 26.25 4.95107 25.9866 4.48223 25.5178C4.01339 25.0489 3.75 24.413 3.75 23.75V6.25C3.75 5.58696 4.01339 4.95107 4.48223 4.48223C4.95107 4.01339 5.58696 3.75 6.25 3.75H11.25M20 21.25L26.25 15M26.25 15L20 8.75M26.25 15H11.25" stroke="#1E1E1E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-        </nav>
-    </header>
+      <div>
+        {% if session['id'] %}
+        <a href="/logout" class="navbar_logout_icon">
+          <img src="{{ url_for('static', filename='icons/logout.svg') }}" alt="로그아웃 아이콘" />
+        </a>
+        {% else %}
+        <a href="/login" class="navbar_login_icon">
+          <img src="{{ url_for('static', filename='icons/login.svg') }}" alt="로그인 아이콘" />
+        </a>
+        {% endif %}
+      </div>
+    </nav>
     <section>
         {% block section %}
 
         {% endblock section %}
     </section>
-</body>
+  </body>
 </html>
