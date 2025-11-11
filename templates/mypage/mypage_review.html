@@ -1,0 +1,37 @@
+<!-- mock page, 백엔드 코드 완료 후 수정 -->
+
+{% extends "index.html" %} 
+{% block head %} 
+{{ super() }}
+
+{% endblock head %} 
+
+{% block section %}
+
+
+    <!-- 페이지네이션 주석처리 중 -->
+    {# TODO: 페이지네이션, href 수정
+    <nav class="pagination">
+
+      {% if page > 0 %}
+        <a class="page-btn" href="#">&lsaquo;</a>
+      {% else %}
+        <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
+      {% endif %}
+
+      {% for i in range(page_count) %}
+        <a class="page-number {% if i == page %}active{% endif %}" 
+          href="#">
+          {{ i + 1 }}
+        </a>
+      {% endfor %}
+
+      {% if page < page_count - 1 %}
+        <a class="page-btn" href="#">&rsaquo;</a>
+      {% else %}
+        <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
+      {% endif %}
+
+    </nav> #}
+
+{% endblock section %}
