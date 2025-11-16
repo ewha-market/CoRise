@@ -19,15 +19,27 @@ def view_list():
     row_count=int(per_page/per_row)
     start_idx=per_page*page
     end_idx=per_page*(page+1)
+
     data = DB.get_item_list()
     item_counts = len(data)
-    data = dict(list(data.items())[start_idx:end_idx])
-    tot_count = len(data)
+
+    data_0 = {}
+    data_1 = {}
+    if item_counts > 0:
+    # 상품이 있는 경우에만 페이징 처리 및 행 분할 로직 실행
+        data = dict(list(data.items())[start_idx:end_idx])
+        tot_count = len(data)
+    
     for i in range(row_count):
-        if (i == row_count-1) and (tot_count%per_row != 0):
-            locals()['data_{}'.format(i)] = dict(list(data.items())[i*per_row:])
-        else:
-            locals()['data_{}'.format(i)] = dict(list(data.items())[i*per_row:(i+1)*per_row])
+        # 상품 분할 로직은 그대로 유지하되, locals() 대신 명시적인 변수에 할당
+        current_data = dict(list(data.items())[i*per_row:] if (i == row_count-1) and (tot_count%per_row != 0)
+                            else dict(list(data.items())[i*per_row:(i+1)*per_row]))
+        
+        # i 값에 따라 동적으로 할당하는 대신 명시적 변수에 할당 (코드 가독성 및 안전성 확보)
+        if i == 0:
+            data_0 = current_data
+        elif i == 1:
+            data_1 = current_data
     return render_template (
         "items.html", 
         datas=data.items(), 
@@ -68,28 +80,8 @@ def reg_item_submit_post():
     return redirect(url_for('view_item_detail', name=data['name']))
 
 @application.route("/reg_reviews")
-#def reg_review():
-#    return render_template("reg_reviews.html")
-# 12주차 리뷰 등록을 위한 경로
-
-# 12주차 리뷰 등록을 위한 경로 추가 시작
-@application.route("/reg_review_init/<name>/")
-def reg_review_init(name):
-    return render_template("reg_reviews.html", name=name)
-@application.route("/reg_review", methods=['POST'])
 def reg_review():
-    data=request.form
-    image_file=request.files["file"]
-    # 이미지 파일을 static/images 경로에 저장합니다.
-    image_file.save("static/images/{}".format(image_file.filename))
-    
-    # DB 핸들러를 사용하여 리뷰 정보를 저장합니다.
-    DB.reg_review(data, image_file.filename)
-    
-    # 저장 후 전체 리뷰 목록 페이지로 이동합니다. (기존 /reviews 경로 사용) [5]
-    return redirect(url_for('view_review'))
-# 12주차 리뷰 등록을 위한 경로 추가 끝
-
+    return render_template("reg_reviews.html")
 
 @application.route("/reviews")
 def view_review():
@@ -170,5 +162,7 @@ def mypage_review_edit():
 
 if __name__ == "__main__":
     application.run(host='0.0.0.0')
+
+
 
 

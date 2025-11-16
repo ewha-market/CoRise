@@ -142,19 +142,6 @@ class DBhandler:
         print("Review data inserted:", review_info)
         return True
     
-    # 12주차 리뷰 등록
-    def reg_review(self, data, img_path):
-        review_info ={
-            # 사용자가 제공한 딕셔너리 키를 사용합니다.
-            "title": data['title'],
-            "rate": data['reviewStar'],
-            "review": data['reviewContents'],
-            "img_path": img_path
-        }
-        # 상품 이름을 파이어베이스의 child 키로 사용하여 리뷰를 설정(set)합니다.
-        self.db.child("review").child(data['name']).set(review_info)
-        return True
-    
     # 상품별 리뷰 조회 (정렬 포함)
     def get_reviews_by_product(self, product_id, sort_by='addDate', order='desc'):
         reviews_ref = self.db.child("Review")
