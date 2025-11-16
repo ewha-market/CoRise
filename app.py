@@ -80,8 +80,27 @@ def reg_item_submit_post():
     return redirect(url_for('view_item_detail', name=data['name']))
 
 @application.route("/reg_reviews")
+#def reg_review():
+#    return render_template("reg_reviews.html")
+# 12주차 리뷰 등록을 위한 경로
+
+# 12주차 리뷰 등록을 위한 경로 추가 시작
+@application.route("/reg_review_init/<name>/")
+def reg_review_init(name):
+    return render_template("reg_reviews.html", name=name)
+@application.route("/reg_review", methods=['POST'])
 def reg_review():
-    return render_template("reg_reviews.html")
+    data=request.form
+    image_file=request.files["file"]
+    # 이미지 파일을 static/images 경로에 저장합니다.
+    image_file.save("static/images/{}".format(image_file.filename))
+    
+    # DB 핸들러를 사용하여 리뷰 정보를 저장합니다.
+    DB.reg_review(data, image_file.filename)
+    
+    # 저장 후 전체 리뷰 목록 페이지로 이동합니다. (기존 /reviews 경로 사용) [5]
+    return redirect(url_for('view_review'))
+# 12주차 리뷰 등록을 위한 경로 추가 끝
 
 @application.route("/reviews")
 def view_review():
