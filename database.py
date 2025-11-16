@@ -145,13 +145,11 @@ class DBhandler:
     # 12주차 리뷰 등록
     def reg_review(self, data, img_path):
         review_info ={
-            # 사용자가 제공한 딕셔너리 키를 사용합니다.
             "title": data['title'],
             "rate": data['reviewStar'],
             "review": data['reviewContents'],
             "img_path": img_path
         }
-        # 상품 이름을 파이어베이스의 child 키로 사용하여 리뷰를 설정(set)합니다.
         self.db.child("review").child(data['name']).set(review_info)
         return True
     
@@ -234,7 +232,7 @@ class DBhandler:
         print("Like data inserted:", like_info)
         return True
     
-
+    # 하트(찜)
     def get_heart_byname(self, uid, name):
         hearts = self.db.child("heart").child(uid).get()
         target_value=""

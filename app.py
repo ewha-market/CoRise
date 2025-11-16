@@ -12,6 +12,7 @@ def hello():
     return redirect(url_for('view_list'))
 
 @application.route("/list")
+# 자꾸 키 오류나서 data_0, data_1 초기화 추가 <- 저만 문제일수도 있어서 이건 잘 돌아가시면 무시하셔도 됩니다.
 def view_list():
     page = request.args.get("page", 0, type=int)
     per_page=8
@@ -93,7 +94,7 @@ def reg_review():
     print(request.form)
     form_data=request.form
     try:
-        image_file = request.files["photos"] # HTML에 맞춰 "photos"로 변경
+        image_file = request.files["photos"]
         
         # 파일이 존재하고 파일명이 있는 경우에만 저장 및 경로 설정
         if image_file.filename:
@@ -105,19 +106,19 @@ def reg_review():
         # 파일 필드가 아예 없거나 잘못된 경우 처리
         img_path = ""
     
-    # DB 핸들러를 사용하여 리뷰 정보를 저장합니다.
     mapped_data = {
-        "name": form_data['name'], # 상품 이름 (DB child key)
+        "name": form_data['name'],
         "title": form_data['title'],
-        "reviewStar": form_data['rating'], # 별점 매핑
-        "reviewContents": form_data['content'] # 내용 매핑
+        "reviewStar": form_data['rating'],
+        "reviewContents": form_data['content']
     }
     DB.reg_review(mapped_data, img_path)
     
-    # 저장 후 전체 리뷰 목록 페이지로 이동합니다. (기존 /reviews 경로 사용) [5]
+    # 저장 후 전체 리뷰 목록 페이지로 이동(기존 /reviews 경로 사용)
     return redirect(url_for('view_review'))
 # 12주차 리뷰 등록을 위한 경로 추가 끝
 # 12주차 리뷰 조회를 위한 경로 추가 시작
+# 이 부분도 제가 키 오류가 있어서.. 잘 돌아가시면 원래 로직(상품 관련)으로 하셔도 될 것 같아요!
 @application.route("/reviews")
 def view_review():
     page = request.args.get("page", 0, type=int)
@@ -137,7 +138,6 @@ def view_review():
         start = i * per_row
         end = (i + 1) * per_row
         
-        # 마지막 줄이 per_row보다 적은 경우를 처리
         if i == row_count - 1 and tot_count % per_row != 0:
             current_data = dict(data_list[start_idx + start:])
         else:
@@ -152,31 +152,22 @@ def view_review():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        # 전체 페이지 개수 계산 (ceil(total/per_page))
         page_count=int((item_counts + per_page - 1) / per_page), 
         total=item_counts
     )
 
 @application.route('/view_review_detail/<name>/')
 def view_review_detail(name):
-    # 상품 이름을 키로 사용하여 리뷰 데이터 가져오기 (12주차 reg_review 방식)
     review_data = DB.db.child("review").child(str(name)).get().val()
-    
     # 상품 이름은 review_data에는 포함되지 않으므로 별도 변수로 전달
     product_name = name 
-    
-    # 리뷰 작성자 닉네임을 가져오는 로직 (작성자 ID가 리뷰 데이터에 있다면)
-    # 현재 reg_review에는 buyerID가 없으므로 임시로 빈값으로 처리하거나, 
-    # 만약 buyerID를 포함하도록 reg_review를 수정했다면 그 정보를 사용
     # 여기서는 data.get('buyerID')가 없다고 가정하고 닉네임은 임시로 None으로 설정
     nickname = None 
     
     if review_data:
-        # DB에서 가져온 리뷰 데이터는 상품 이름(name)을 key로 가진다.
-        # review_detail.html 템플릿에 필요한 데이터를 전달
         return render_template("review_detail.html", 
-                                name=product_name, # 상품 이름
-                                data=review_data,  # 리뷰 내용 (title, rate, review, img_path)
+                                name=product_name,
+                                data=review_data,
                                 nickname=nickname)
     else:
         # 리뷰가 존재하지 않는 경우 처리
