@@ -22,7 +22,7 @@
                     <p class="item-name">{{ order.item_name }}</p>
                     <p class="item-price">{{ order.item_price }}원</p>
                 </div>
-                <button type="button" onclick="location.href='{{ url_for('reg_review_init', name=order.item_name) }}'" class="review-btn">리뷰 작성</button>
+                <button type="button" onclick=" location.href='{{ url_for('reg_review_init', name=order.item_name) }}'" class="review-btn">리뷰 작성</button>
             </div>
         </div>
         {% endfor %}

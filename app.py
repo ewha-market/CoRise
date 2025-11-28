@@ -133,7 +133,8 @@ def reg_review():
         "name": form_data['name'],
         "title": form_data['title'],
         "reviewStar": form_data['rating'],
-        "reviewContents": form_data['content']
+        "reviewContents": form_data['content'],
+        "buyerID": session['id'] 
     }
     DB.reg_review(mapped_data, img_path)
     
@@ -358,7 +359,7 @@ def mypage_buy():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
@@ -456,7 +457,7 @@ def mypage_like():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
@@ -472,39 +473,23 @@ def mypage_review():
     data = DB.get_reviews_by_user(user_id)
     #페이지네이션
     page = request.args.get("page", 0, type=int)
-    per_page = 6
-    per_row = 3
-    row_count = int(per_page / per_row)
+    per_page = 3
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
     item_counts = len(data)
     data_list = list(data.items())        
     data_paged = dict(data_list[start_idx:end_idx])
-    locals_data = {}
-    tot_count = len(data_paged)
 
-    for i in range(row_count):
-        start = i * per_row
-        end = (i + 1) * per_row
-
-        if i == row_count - 1 and tot_count % per_row != 0:
-            current_data = dict(data_list[start_idx + start:])
-        else:
-            current_data = dict(data_list[start_idx + start: start_idx + end])
-
-        locals_data[f'data_{i}'] = current_data
     #작동 확인용  -> 프론트 구현 후 삭제    
     print("=== mypage_review: data_list ===")
     print(data_list)
     return render_template(
         "mypage/mypage_review.html",
-        # data_0, data_1을 reviews.html에 row1, row2로 전달
         user_name=user_name,
-        row1=locals_data.get('data_0', {}).items(), 
-        row2=locals_data.get('data_1', {}).items(),
+        row1=data_paged.items(), 
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
