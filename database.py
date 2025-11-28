@@ -149,64 +149,46 @@ class DBhandler:
 #----------------------------------------------------------------------------
 #Review 관련 CRUD 
 #----------------------------------------------------------------------------            
-    #리뷰 등록
-    def insert_review(self, review_id, data, img_urls):
+    # 리뷰 등록 (다중 이미지 + 고유 ID 생성)
+    def reg_review(self, data, img_paths):
         review_info = {
-            "reviewID": review_id,
-            "orderID": data['orderID'], 
+            "title": data['title'],
+            "rate": int(data['rating']),
+            "review": data['content'],
+            "img_path": img_paths,
             "buyerID": data['buyerID'],
-            "productID": data['productID'],
-            "title": data['title'],
-            "rating": int(data['rating']), 
-            "description": data['description'],
-            "image": img_urls, 
-            "addDate": pyrebase.database.ServerTimestamp
+            "productID": data['name'],
+            "timestamp": {".sv": "timestamp"}
         }
 
-        self.db.child("Review").child(review_id).set(review_info)
-        print("Review data inserted:", review_info)
+        self.db.child("review").push(review_info)
         return True
     
-    # 12주차 리뷰 등록
-    def reg_review(self, data, img_path):
-        review_info ={
-            "title": data['title'],
-            "rate": data['reviewStar'],
-            "review": data['reviewContents'],
-            "img_path": img_path,
-            "buyerID": data['buyerID']
-        }
-        self.db.child("review").child(data['name']).set(review_info)
-        return True
-    
-    # 12주차 리뷰 조회를 위한 함수
-    def get_reviews(self):
-        # "review" 테이블의 모든 데이터를 가져오기
+    # 리뷰 전체 조회
+    def get_reviews(self, sort_key='timestamp', reverse=True):
         reviews = self.db.child("review").get().val()
-        # 데이터가 없는 경우 빈 딕셔너리를 반환
-        return reviews if reviews else {}
-
-
-    # 상품별 리뷰 조회 (정렬 포함)
-    def get_reviews_by_product(self, product_id, sort_by='addDate', order='desc'):
-        reviews_ref = self.db.child("Review")
         
-        # productID를 기준으로 필터링하여 쿼리 실행
-        query = reviews_ref.order_by_child("productID").equal_to(product_id).get()
+        if not reviews:
+            return {}
+
+        reviews_list = list(reviews.items())
         
-        reviews_list = []
-        for review in query.each():
-            reviews_list.append(review.val())
-            
-        # Python에서 정렬 (Timestamp는 Firebase에서 오름차순으로만 정렬되므로 Python 정렬 사용)
-        if sort_by == 'addDate' or sort_by == 'rating':
-            reviews_list.sort(key=lambda x: x.get(sort_by, 0), reverse=(order=='desc'))
-            
-        return reviews_list
+        # 정렬 로직
+        # sort_key가 'rate'면 별점순, 'timestamp'면 최신순
+        try:
+            reviews_list.sort(key=lambda x: int(x[1].get(sort_key, 0)), reverse=reverse)
+        except ValueError:
+            reviews_list.sort(key=lambda x: 0, reverse=reverse)
+        
+        return dict(reviews_list)
+
+    # 리뷰 상세 조회
+    def get_review_by_id(self, review_id):
+        return self.db.child("review").child(review_id).get().val()
     
     # 리뷰 수정
     def update_review(self, review_id, update_data, new_img_urls=None):
-        review_ref = self.db.child("Review").child(review_id)
+        review_ref = self.db.child("review").child(review_id)
         
         # 수정할 데이터 딕셔너리 구성 (Rating은 int로 변환)
         data_to_update = {}
@@ -227,7 +209,7 @@ class DBhandler:
 
     # 리뷰 삭제
     def delete_review(self, review_id):
-        self.db.child("Review").child(review_id).remove()
+        self.db.child("review").child(review_id).remove()
         return True
     
 #----------------------------------------------------------------------------

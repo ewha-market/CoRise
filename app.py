@@ -103,75 +103,106 @@ def reg_item_submit_post():
     
     return redirect(url_for('view_item_detail', name=data['name']))
 
-@application.route("/reg_reviews")
-#def reg_review():
-#    return render_template("reg_reviews.html")
-# 12주차 리뷰 등록을 위한 경로
-
 # 12주차 리뷰 등록을 위한 경로 추가 시작
 @application.route("/reg_review_init/<name>/")
 def reg_review_init(name):
     return render_template("reg_reviews.html", name=name)
+
 @application.route("/reg_review", methods=['POST'])
 def reg_review():
-    print(request.form)
-    form_data=request.form
-    try:
-        image_file = request.files["photos"]
-        
-        # 파일이 존재하고 파일명이 있는 경우에만 저장 및 경로 설정
-        if image_file.filename:
-            image_file.save("static/images/{}".format(image_file.filename))
-            img_path = image_file.filename
-        else:
-            img_path = ""
-    except KeyError:
-        # 파일 필드가 아예 없거나 잘못된 경우 처리
-        img_path = ""
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    form_data = request.form
+    img_paths = [] 
     
+    try:
+        # 다중 이미지 처리
+        images = request.files.getlist("photos") 
+        for image in images:
+            if image.filename:
+                image.save("static/images/{}".format(image.filename))
+                img_paths.append(image.filename)
+                if len(img_paths) >= 5: break 
+    except KeyError:
+        pass 
+
     mapped_data = {
-        "name": form_data['name'],
+        "name": form_data['name'],      
         "title": form_data['title'],
-        "reviewStar": form_data['rating'],
-        "reviewContents": form_data['content'],
+        "rating": form_data['rating'],
+        "content": form_data['content'],
         "buyerID": session['id'] 
     }
-    DB.reg_review(mapped_data, img_path)
     
-    # 저장 후 전체 리뷰 목록 페이지로 이동(기존 /reviews 경로 사용)
+    DB.reg_review(mapped_data, img_paths)
+    
     return redirect(url_for('view_review'))
-# 12주차 리뷰 등록을 위한 경로 추가 끝
-# 12주차 리뷰 조회를 위한 경로 추가 시작
-# 이 부분도 제가 키 오류가 있어서.. 잘 돌아가시면 원래 로직(상품 관련)으로 하셔도 될 것 같아요!
+
 @application.route("/reviews")
 def view_review():
     page = request.args.get("page", 0, type=int)
-    per_page=6 
-    per_row=3 
-    row_count=int(per_page/per_row)
-    start_idx=per_page*page
-    end_idx=per_page*(page+1)
-    data = DB.get_reviews() 
-    item_counts = len(data)
-    data_list = list(data.items())
-    data_paged = dict(data_list[start_idx:end_idx])
-    locals_data = {}
-    tot_count = len(data_paged)
+    order_param = request.args.get("order", "최신순")
+    rating_param = request.args.get("rating", "별점높은순")
+    
+    # 1. 정렬 기준 설정
+    sort_key = 'timestamp'
+    reverse = True
+    if rating_param == '별점낮은순':
+        sort_key = 'rate'
+        reverse = False
+    elif rating_param == '별점높은순':
+        sort_key = 'rate'
+        reverse = True
+    elif order_param == '오래된 순':
+        sort_key = 'timestamp'
+        reverse = False
+    
+    # 2. DB에서 가져오기
+    data = DB.get_reviews(sort_key, reverse)
+    
+    # 3. 닉네임 추가 & 이미지 리스트 처리
+    final_data = {}
+    for key, value in data.items():
+        # 닉네임 조회
+        writer_id = value.get('buyerID')
+        value['nickname'] = DB.get_user_nickname(writer_id) if writer_id else "알 수 없음"
+        
+        # 템플릿 오류 방지: img_path가 리스트일 경우 첫 번째 사진만 대표 이미지로 문자열 변환
+        # (HTML을 수정하지 않고 백엔드에서 처리해주는 방식)
+        imgs = value.get('img_path')
+        if isinstance(imgs, list) and len(imgs) > 0:
+            value['img_path'] = imgs[0] # 리스트의 첫 번째 사진을 대표 사진으로
+        elif not imgs:
+            value['img_path'] = "" 
+            
+        final_data[key] = value
 
+    # 4. 페이지네이션 
+    per_page = 6 
+    per_row = 3 
+    row_count = int(per_page/per_row)
+    start_idx = per_page * page
+    end_idx = per_page * (page + 1)
+    
+    item_counts = len(final_data)
+    data_list = list(final_data.items()) # 이미 정렬된 상태
+    data_paged = dict(data_list[start_idx:end_idx])
+    
+    locals_data = {}
+    # ... (row 분할 로직 기존과 동일) ...
+    tot_count = len(data_paged)
     for i in range(row_count):
         start = i * per_row
         end = (i + 1) * per_row
-        
         if i == row_count - 1 and tot_count % per_row != 0:
-            current_data = dict(data_list[start_idx + start:])
+            current_data = dict(list(data_paged.items())[start:])
         else:
-            current_data = dict(data_list[start_idx + start: start_idx + end])
-        
+            current_data = dict(list(data_paged.items())[start:end])
         locals_data[f'data_{i}'] = current_data
 
     return render_template(
         "reviews.html",
-        # data_0, data_1을 reviews.html에 row1, row2로 전달
         row1=locals_data.get('data_0', {}).items(), 
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
@@ -179,31 +210,45 @@ def view_review():
         page_count=int((item_counts + per_page - 1) / per_page), 
         total=item_counts
     )
-
-@application.route('/view_review_detail/<name>/')
-def view_review_detail(name):
-    review_data = DB.db.child("review").child(str(name)).get().val()
-    # 상품 이름은 review_data에는 포함되지 않으므로 별도 변수로 전달
-    product_name = name 
-    # 여기서는 data.get('buyerID')가 없다고 가정하고 닉네임은 임시로 None으로 설정
-    nickname = None 
     
+@application.route('/view_review_detail/<key>/')
+def view_review_detail(key):
+    review_data = DB.get_review_by_id(key)
     if review_data:
+        writer_id = review_data.get('buyerID')
+        nickname = DB.get_user_nickname(writer_id)
+        
         return render_template("review_detail.html", 
-                                name=product_name,
                                 data=review_data,
+                                name=review_data.get('productID'),
                                 nickname=nickname)
     else:
-        # 리뷰가 존재하지 않는 경우 처리
-        flash(f"'{name}'에 대한 리뷰가 없습니다.")
+        flash("리뷰가 없습니다.")
         return redirect(url_for('view_review'))
-# 12주차 리뷰 조회를 위한 경로 추가 끝
 
 
 
-@application.route("/reviews_by_item")
-def view_review_by_item():
-    return render_template("reviews_by_item.html")
+@application.route("/reviews_by_item/<name>/")
+def view_review_by_item(name):
+    all_reviews = DB.get_reviews() 
+    target_reviews = {}
+    
+    for key, value in all_reviews.items():
+        if value.get('productID') == name:
+            # 닉네임 가져오기
+            writer_id = value.get('buyerID')
+            value['nickname'] = DB.get_user_nickname(writer_id) or "알 수 없음"
+            
+            # 이미지 처리 (리스트의 첫 번째만 썸네일로 사용)
+            imgs = value.get('img_path')
+            if isinstance(imgs, list) and len(imgs) > 0:
+                value['img_path'] = imgs[0]
+            
+            target_reviews[key] = value
+
+    return render_template("reviews_by_item.html", 
+                           reviews=target_reviews, 
+                           product_name=name)
 
 @application.route("/login")
 def login():
@@ -502,11 +547,31 @@ def mypage_sell_edit():
     return render_template("mypage/mypage_sell_edit.html")
 
 #작성한리뷰수정페이지(9.5.1)
-@application.route("/mypage_review_edit")
-def mypage_review_edit():
-    return render_template("mypage/mypage_review_edit.html")
+@application.route("/mypage_review_edit/<key>")
+def mypage_review_edit(key):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+        
+    # 1. DB에서 해당 리뷰 데이터를 가져옴 (기존 내용 채워넣기 위해)
+    review_data = DB.get_review_by_id(key)
+    
+    if not review_data:
+        flash("존재하지 않는 리뷰입니다.")
+        return redirect(url_for('mypage_review'))
 
+    # 2. html 파일에 데이터와 key를 함께 보냄
+    return render_template("mypage/mypage_review_edit.html", data=review_data, key=key)
 
+# [추가] 리뷰 삭제 기능
+@application.route("/delete_review/<key>")
+def delete_review(key):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+        
+    # DB에서 삭제 함수 호출
+    DB.delete_review(key)
+    flash("리뷰가 삭제되었습니다.")
+    return redirect(url_for('mypage_review'))
 
 if __name__ == "__main__":
     application.run(host='0.0.0.0')
