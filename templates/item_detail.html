@@ -61,10 +61,8 @@
             </svg>-->
         </button>
         <button class="btn primary">구매하기</button>
-        <!-- 12주차 과제에서 상품 상세 페이지에서 리뷰 등록으로 변경
         <button class="btn" onclick='window.location.href="{{ url_for("view_review_by_item") }}"'>리뷰 보기</button>
-        -->
-        <button class="btn" onclick='location.href="{{ url_for("reg_review_init", item_id=item_id) }}";'>리뷰 등록</button>
+        <!-- 12주차 과제 리뷰 등록 버튼 제거 후 다시 상품 리뷰 보기 -->
       </div>
     </div>
   </section>
@@ -78,7 +76,7 @@
   </section>
 </main>
 
-<!-- 🔹 JS: 썸네일 클릭 시 대표 이미지 변경 -->
+<!-- JS: 썸네일 클릭 시 대표 이미지 변경 -->
 <script>
   function changeHero(imageSrc) {
     const heroImg = document.getElementById("heroImage");
