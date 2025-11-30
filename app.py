@@ -3,6 +3,7 @@ from database import DBhandler
 import hashlib
 import sys
 import math
+import time
 
 application = Flask(__name__)
 application.config["SECRET_KEY"] = "helloosp"
@@ -52,6 +53,12 @@ def view_list():
     # row1, row2에 데이터가 없을 경우를 대비해 기본값 설정
     row1_items = row_data.get("data_0", {}).items()
     row2_items = row_data.get("data_1", {}).items()
+
+    user_likes = []
+    if 'id' in session:
+        # DB에서 유저의 찜 목록 가져오기
+        likes_data = DB.get_likes_by_user(session['id'])
+        user_likes = list(likes_data.keys()) if likes_data else []
     
     return render_template (
         "items.html", 
@@ -66,10 +73,11 @@ def view_list():
         # 정렬 및 가격 정렬 매개변수 추가 전달
         sort=sort,
         price_order=price_order,
-        search_query=search_query
+        search_query=search_query,
+        user_likes=user_likes
     )
 
-# 상품 상세 조회: <name> -> <item_id>로 변경
+# 상품 상세 조회
 @application.route('/view_detail/<item_id>/')
 def view_item_detail(item_id):
     print("###item_id:", item_id)
@@ -80,7 +88,12 @@ def view_item_detail(item_id):
         return redirect(url_for('view_list'))
         
     print("###data:",data)
-    seller_nickname = DB.get_user_nickname(data.get('seller'))
+    seller_id = data.get('seller')
+    seller_nickname = DB.get_user_nickname(seller_id)
+
+    if not seller_nickname:
+        seller_nickname = seller_id if seller_id else "알 수 없음"
+
     return render_template("item_detail.html",
                             name=data.get('name'), # 상품명은 data에서 가져와 템플릿에 전달
                             data=data, 
@@ -88,29 +101,114 @@ def view_item_detail(item_id):
                             item_id=item_id # 템플릿에서 좋아요/리뷰 링크에 사용할 ID 전달
                     )
 
-# 상품 구매  (임시 - 수정해주세요!)
-@application.route("/order_item/<name>/")
-def order_item(name):
+# 상품 구매
+@application.route("/order_item/<item_id>/")
+def order_item(item_id):
     if 'id' not in session or not session['id']:
         flash('로그인을 해주세요.')
         return redirect(url_for('login'))
 
     user_id = session['id']
-    item_data = DB.get_item_byname(str(name))
-    address = item_data.get("addr", "임시 주소")
-
-    order_id = f"{name}_{user_id}"
+    # name 대신 item_id로 상품 정보 조회
+    item_data = DB.get_item_byid(item_id)
+    
+    if not item_data:
+        flash("상품 정보를 찾을 수 없습니다.")
+        return redirect(url_for('view_list'))
+    
+    # 상품이 삭제되더라도 내역은 남도록, 구매 시점의 정보를 모두 저장
+    order_id = f"{user_id}_{item_id}_{int(time.time())}"
 
     order_data = {
         "buyerID": user_id,
-        "productID": name,
-        "address": address,
+        "productID": item_id,
+        "sellerID": item_data.get("seller"),
+        "address": item_data.get("addr", "임시 주소"),
+        # 구매 내역 보존을 위한 스냅샷 데이터
+        "item_name": item_data.get("name"),
+        "item_price": item_data.get("price"),
+        "item_img": item_data.get("img_path")
     }
 
     DB.insert_order(order_id, order_data)
-    flash("구매가 완료되었습니다.")
 
-    return redirect(url_for("mypage_buy"))
+    return f"""
+    <script>
+        alert("구매가 성공적으로 완료되었습니다!\\n구매 내역 페이지로 이동합니다.");
+        location.href = "{url_for('mypage_buy')}";
+    </script>
+    """
+
+
+# 상품 삭제 요청 처리
+@application.route("/delete/<item_id>")
+def delete_item(item_id):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+        
+    data = DB.get_item_byid(item_id)
+    
+    # 상품 데이터가 없는 경우 예외 처리
+    if data is None:
+        flash("해당 상품을 찾을 수 없습니다.")
+        return redirect(url_for('mypage_sell'))
+
+    if data['seller'] != session['id']:
+        flash("본인의 상품만 삭제할 수 있습니다.")
+        return redirect(url_for('mypage_sell'))
+        
+    DB.delete_item(item_id)
+    flash("상품이 삭제되었습니다.")
+    return redirect(url_for('mypage_sell'))
+
+# 상품 수정 페이지 보여주기
+@application.route("/edit/<item_id>")
+def view_item_edit(item_id):
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    data = DB.get_item_byid(item_id)
+
+    # 상품 데이터가 없는 경우 예외 처리
+    if data is None:
+        flash("해당 상품을 찾을 수 없습니다.")
+        return redirect(url_for('mypage_sell'))
+        
+    if data['seller'] != session['id']:
+        flash("수정 권한이 없습니다.")
+        return redirect(url_for('mypage_sell'))
+
+    return render_template("mypage/mypage_sell_edit.html", data=data, item_id=item_id)
+
+# 상품 수정 완료 처리(POST)
+@application.route("/update_item_post/<item_id>", methods=['POST'])
+def update_item_post(item_id):
+    # 로그인 확인
+    if 'id' not in session:
+        return redirect(url_for('login'))
+
+    # 여러 파일을 리스트로 받음
+    files = request.files.getlist("file")
+    img_paths = []
+
+    # 파일이 선택되었는지 확인(빈 파일이 넘어오지 않았는지 체크)
+    if files and files[0].filename:
+        for file in files:
+            if file.filename:
+                # 파일 저장
+                file.save("static/images/{}".format(file.filename))
+                # 리스트에 파일명 추가
+                img_paths.append(file.filename)
+
+    data = request.form
+    
+    # img_paths 리스트가 비어있지 않으면(새 파일 업로드 됨) DB에 전달
+    # 비어있으면(None) DB 함수 내부에서 기존 이미지 유지
+    DB.update_item(item_id, data, img_paths if img_paths else None)
+    
+    flash("상품 정보가 수정되었습니다.")
+    return redirect(url_for('view_item_detail', item_id=item_id))
+
 
 # 상품등록 페이지 반환 (reg_items.html)
 @application.route("/reg_items")
@@ -124,22 +222,35 @@ def reg_item():
 # reg_items.html에 입력한 값들 db에저정 -> 상품상세 페이지 념겨줌
 @application.route("/submit_item_post", methods=['POST'])
 def reg_item_submit_post():
-    image_file=request.files["file"]
-    image_file.save("static/images/{}".format(image_file.filename))
-    data=request.form
+    # 파일 하나가 아니라 리스트로 받아옴
+    files = request.files.getlist("file")
+    # 파일명을 담을 리스트
+    img_paths = []
 
-    # 카테고리 미선택 시 '기타'로 자동 설정
+    # 여러 개의 파일을 반복문으로 하나씩 저장
+    for file in files:
+        if file.filename:
+            # 파일 저장
+            file.save("static/images/{}".format(file.filename))
+            # 저장된 파일명을 리스트에 추가
+            img_paths.append(file.filename)
+
+    # 사진을 안 올렸을 경우 대비
+    if not img_paths:
+        img_paths = [""]
+
+    data = request.form
+
     category = data.get('category', '').strip()
     if not category:
         data = data.to_dict()
         data['category'] = '기타'
     else:
-        data = data.to_dict() # 불변 대비 딕셔너리로 변환
+        data = data.to_dict()
 
-    # DB.insert_item 호출 수정 (상품명 인자 제거, item_id를 반환받음)
-    item_id = DB.insert_item(data, image_file.filename, session['id'])
+    # img_paths 리스트를 그대로 DB에 넘김
+    item_id = DB.insert_item(data, img_paths, session['id'])
     
-    # redirect URL 수정: name 대신 item_id 사용
     return redirect(url_for('view_item_detail', item_id=item_id))
 
 @application.route("/reg_reviews")
@@ -221,7 +332,7 @@ def view_review():
         total=item_counts
     )
 
-# 리뷰 상세 조회: <name> -> <review_id>로 변경 및 상품명 조회 로직 추가
+# 리뷰 상세 조회: <name> -> <review_id>로 변경 및 상품명 조회 로직 추가 (리뷰 로직 확인 필요!)
 @application.route('/view_review_detail/<review_id>/')
 def view_review_detail(review_id):
     # review_id를 키로 사용
@@ -326,7 +437,7 @@ def unlike(item_id):
     return jsonify({'msg': '안좋아요 완료!'})
 
 
-#마이페이지 관련 코드
+#마이페이지 관련 코드 
 #마이페이지(9.1)
 @application.route("/mypage")
 def mypage():
@@ -335,7 +446,7 @@ def mypage():
             return redirect(url_for('login'))
     user_id = session['id']
     user_info = DB.get_user_info(user_id)
-    return render_template("mypage/mypage.html", user=user_info)
+    return render_template("mypage/mypage.html", user=user_info) 
 
 #마이페이지편집(9.1)/GET
 @application.route("/mypage_edit", methods=["GET"])
@@ -374,9 +485,10 @@ def mypage_buy():
     data = { o['orderID']: o for o in orders }
     #페이지네이션
     page = request.args.get("page", 0, type=int)
-    per_page = 6
-    per_row = 3
-    row_count = int(per_page / per_row)
+    per_page = 3
+    #per_row = 3
+    #row_count = int(per_page / per_row)
+    total = len(orders)
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
     item_counts = len(data)
@@ -384,20 +496,21 @@ def mypage_buy():
     data_paged = dict(data_list[start_idx:end_idx])
     locals_data = {}
     tot_count = len(data_paged)
+    locals_data['data_0'] = data_paged
 
-    for i in range(row_count):
-        start = i * per_row
-        end = (i + 1) * per_row
+    #for i in range(row_count):
+    #    start = i * per_row
+    #    end = (i + 1) * per_row
 
-        if i == row_count - 1 and tot_count % per_row != 0:
-            current_data = dict(data_list[start_idx + start:])
-        else:
-            current_data = dict(data_list[start_idx + start: start_idx + end])
+    #    if i == row_count - 1 and tot_count % per_row != 0:
+    #        current_data = dict(data_list[start_idx + start:])
+    #    else:
+    #        current_data = dict(data_list[start_idx + start: start_idx + end])
 
-        locals_data[f'data_{i}'] = current_data
+    #    locals_data[f'data_{i}'] = current_data
     #작동 확인용  -> 프론트 구현 후 삭제
-    print("=== mypage_buy: data_list ===")
-    print(data_list)
+    # print("=== mypage_buy: data_list ===")
+    # print(data_list)
     return render_template(
         "mypage/mypage_buy.html",
         # data_0, data_1을 reviews.html에 row1, row2로 전달
@@ -406,11 +519,13 @@ def mypage_buy():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
+
 #판매내역페이지(9.3)
+# 데이터 딕셔너리 키를 item_id(productID)로 설정
 @application.route("/mypage_sell")
 def mypage_sell():
     if 'id' not in session or not session['id']:
@@ -420,30 +535,32 @@ def mypage_sell():
     user_name = DB.get_user_nickname(user_id) or user_id
 
     items = DB.get_items_by_seller(user_id)
-    data = { str(idx): item for idx, item in enumerate(items) }
+
+    data = { item['productID']: item for item in items }
+    
     #페이지네이션
     page = request.args.get("page", 0, type=int)
-    per_page = 6
-    per_row = 3
-    row_count = int(per_page / per_row)
+    per_page = 3
+    #per_row = 3
+    #row_count = int(per_page / per_row)
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
     item_counts = len(data)
     data_list = list(data.items())        
     data_paged = dict(data_list[start_idx:end_idx])
     locals_data = {}
-    tot_count = len(data_paged)
+    locals_data['data_0'] = data_paged
 
-    for i in range(row_count):
-        start = i * per_row
-        end = (i + 1) * per_row
+    # for i in range(row_count):
+    #    start = i * per_row
+    #    end = (i + 1) * per_row
 
-        if i == row_count - 1 and tot_count % per_row != 0:
-            current_data = dict(data_list[start_idx + start:])
-        else:
-            current_data = dict(data_list[start_idx + start: start_idx + end])
+    #    if i == row_count - 1 and tot_count % per_row != 0:
+    #        current_data = dict(data_list[start_idx + start:])
+    #    else:
+    #        current_data = dict(data_list[start_idx + start: start_idx + end])
 
-        locals_data[f'data_{i}'] = current_data
+    #    locals_data[f'data_{i}'] = current_data
     #작동 확인용  -> 프론트 구현 후 삭제
     print("=== mypage_sell: data_list ===")
     print(data_list)
@@ -455,7 +572,7 @@ def mypage_sell():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1, int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
@@ -503,7 +620,7 @@ def mypage_like():
         row2=locals_data.get('data_1', {}).items(),
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
@@ -519,39 +636,23 @@ def mypage_review():
     data = DB.get_reviews_by_user(user_id)
     #페이지네이션
     page = request.args.get("page", 0, type=int)
-    per_page = 6
-    per_row = 3
-    row_count = int(per_page / per_row)
+    per_page = 3
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
     item_counts = len(data)
     data_list = list(data.items())        
     data_paged = dict(data_list[start_idx:end_idx])
-    locals_data = {}
-    tot_count = len(data_paged)
 
-    for i in range(row_count):
-        start = i * per_row
-        end = (i + 1) * per_row
-
-        if i == row_count - 1 and tot_count % per_row != 0:
-            current_data = dict(data_list[start_idx + start:])
-        else:
-            current_data = dict(data_list[start_idx + start: start_idx + end])
-
-        locals_data[f'data_{i}'] = current_data
     #작동 확인용  -> 프론트 구현 후 삭제    
     print("=== mypage_review: data_list ===")
     print(data_list)
     return render_template(
         "mypage/mypage_review.html",
-        # data_0, data_1을 reviews.html에 row1, row2로 전달
         user_name=user_name,
-        row1=locals_data.get('data_0', {}).items(), 
-        row2=locals_data.get('data_1', {}).items(),
+        row1=data_paged.items(), 
         limit=per_page,
         page=page,
-        page_count=int((item_counts + per_page - 1) / per_page),
+        page_count=max(1,int((item_counts + per_page - 1) / per_page)),
         total=item_counts
     )
 
@@ -572,3 +673,19 @@ def mypage_review_edit():
 
 if __name__ == "__main__":
     application.run(host='0.0.0.0')
+
+
+# 페이지네이션 중복 제거 헬퍼 함수
+def paginate_data(data, page, per_page):
+    item_counts = len(data)
+    # 전체 페이지 수 계산
+    page_count = math.ceil(item_counts / per_page)
+    
+    start_idx = per_page * page
+    end_idx = per_page * (page + 1)
+    
+    # 딕셔너리를 리스트로 변환 후 슬라이싱
+    data_list = list(data.items())
+    current_page_data = dict(data_list[start_idx:end_idx])
+    
+    return current_page_data, page_count, item_counts
