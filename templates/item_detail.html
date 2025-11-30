@@ -64,7 +64,7 @@
             </svg>-->
         </button>
         <button type="button" class="btn primary" onclick="purchaseItem()">구매하기</button>
-        <button class="btn" onclick='window.location.href="{{ url_for("view_review_by_item") }}"'>리뷰 보기</button>
+        <button class="btn" onclick='window.location.href="{{ url_for("view_review_by_item", name=name) }}"'>리뷰 보기</button>
         <!-- 12주차 과제 리뷰 등록 버튼 제거 후 다시 상품 리뷰 보기 -->
       </div>
     </div>
@@ -74,7 +74,7 @@
   <section class="pd-info">
     <h2>상품 정보</h2>
     <div class="info-card">
-      <p>{{ data.description }}</p>
+      <p class="pd-description">{{ data.description }}</p>
     </div>
   </section>
 </main>
@@ -94,7 +94,6 @@
       location.href = "{{ url_for('order_item', item_id=item_id) }}";
     }
   }
-
 
 
 

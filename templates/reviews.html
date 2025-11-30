@@ -5,10 +5,8 @@
 />
 {% endblock head %} {% block section %}
 <div class="rvall-top">
-  <!-- BE: (total) 총 리뷰의 갯수 불러오기 -->
   <p class="rvall-count"><span class="rvall-total">{{ total }}</span> 개의 리뷰가 등록되었습니다!</p>
 
-  <!-- FE -> BE: order, rating 전달 -->
   <form class="rvall-sorts" method="get" action="/reviews">
     <label class="select-pill">
       <select class="rvall-sort-cat" name="order" onchange="this.form.submit()">
@@ -33,20 +31,22 @@
 </div>
 
 
-{% if total > 0 %} <div class="rvall-list">
-  
-  {% for key, value in row1 %} <div class="rvall-card" onclick="location.href='/view_review_detail/{{ key }}/';" style="cursor: pointer;"> 
+{% if total > 0 %} 
+<div class="rvall-list">
+  {% for key, value in row1 %} 
+  <div class="rvall-card" onclick="location.href='/view_review_detail/{{ key }}/';" style="cursor: pointer;"> 
     <div class="rvall-card-content-wrapper">
       <div class="rvall-main-content">
         <div class="rvall-review-header">
           <div class="rvall-user-info">
             <div class="rvall-avatar"></div>
-            <div class="rvall-user-name">작성자 닉네임</div> </div>
+            <div class="rvall-user-name">{{ value.nickname }}</div>
+          </div>
         </div>
 
         <div class="rvall-product-info">
           <span class="rvall-label">상품:</span>
-          <span class="rvall-product-name">{{ key }}</span> </div>
+          <span class="rvall-product-name">{{ value.product_name }}</span> </div>
 
         <div class="rvall-review-title-section">
           <h3 class="rvall-review-title">{{ value.title }}</h3> <div class="rvall-rating">
@@ -71,18 +71,19 @@
   </div>
   {% endfor %}
 
-  {% for key, value in row2 %} <div class="rvall-card" onclick="location.href='/view_review_detail/{{ key }}/';" style="cursor: pointer;">
+  {% for key, value in row2 %}
+  <div class="rvall-card" onclick="location.href='/view_review_detail/{{ key }}/';" style="cursor: pointer;">
     <div class="rvall-card-content-wrapper">
       <div class="rvall-main-content">
         <div class="rvall-review-header">
           <div class="rvall-user-info">
             <div class="rvall-avatar"></div>
-            <div class="rvall-user-name">작성자 닉네임</div> </div>
+            <div class="rvall-user-name">{{ value.nickname }}</div> </div>
         </div>
 
         <div class="rvall-product-info">
           <span class="rvall-label">상품:</span>
-          <span class="rvall-product-name">{{ key }}</span> </div>
+          <span class="rvall-product-name">{{ value.product_name }}</span> </div>
 
         <div class="rvall-review-title-section">
           <h3 class="rvall-review-title">{{ value.title }}</h3> <div class="rvall-rating">

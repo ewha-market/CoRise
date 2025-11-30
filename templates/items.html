@@ -123,7 +123,7 @@
 
         <!-- 카테고리 -->
       <label class="select-pill">
-        <select id="category" name="category" aria-label="카테고리" onchange="location=this.value">>
+        <select id="category" name="category" aria-label="카테고리">
           <option value="all">카테고리</option>
           <option value="가전">가전</option>
           <option value="의류">의류</option>
@@ -224,7 +224,13 @@
 
       <!-- 이전 페이지 버튼 -->
       {% if page > 0 %}
-        <a class="page-btn" href="{{ url_for('view_list', page=page-1) }}">&lsaquo;</a>
+        <a class="page-btn"
+          href="{{ url_for('view_list',
+                     page=page-1,
+                     category=category,
+                     sort=sort,
+                     price=price_order,
+                     q=search_query) }}">&lsaquo;</a>
       {% else %}
         <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
       {% endif %}
@@ -232,14 +238,25 @@
       <!-- 페이지 번호 반복 -->
       {% for i in range(page_count) %}
         <a class="page-number {% if i == page %}active{% endif %}" 
-          href="{{ url_for('view_list', page=i) }}">
+          href="{{ url_for('view_list',
+                     page=i,
+                     category=category,
+                     sort=sort,
+                     price=price_order,
+                     q=search_query) }}">
           {{ i + 1 }}
         </a>
       {% endfor %}
 
       <!-- 다음 페이지 버튼 -->
       {% if page < page_count - 1 %}
-        <a class="page-btn" href="{{ url_for('view_list', page=page+1) }}">&rsaquo;</a>
+        <a class="page-btn"
+          href="{{ url_for('view_list',
+                     page=page+1,
+                     category=category,
+                     sort=sort,
+                     price=price_order,
+                     q=search_query) }}">&rsaquo;</a>
       {% else %}
         <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
       {% endif %}

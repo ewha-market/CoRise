@@ -351,6 +351,14 @@ select.rvbyitem-sort-cat {
   width: 110px;
   height: 110px;
   background: #d9d9d9;
+  overflow: hidden;
+}
+
+.rvreg-media-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .reg-review-form {
@@ -485,6 +493,10 @@ textarea {
   margin-bottom: 1.2rem;
 }
 
+.rvdetail-stars .star.star--empty {
+  color: #E0E0E0;
+}
+
 .rvdetail-title {
   font-family: "Pretendard";
   font-size: 1.8rem;
@@ -525,4 +537,12 @@ textarea {
   width: 79px;
   height: 79px;
   background: #d9d9d9;
+  overflow: hidden;
+}
+
+.rvdetail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
