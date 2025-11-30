@@ -9,17 +9,20 @@
 <main class="pd-wrap" aria-label="상품 상세">
   <!-- 좌측: 이미지 갤러리 -->
   <section class="pd-gallery">
-    <!-- 썸네일 버튼 -->
-        <div class="thumbs">
-        <button class="thumb" aria-label="대표 이미지 썸네일"></button>
-        <button class="thumb" aria-label="보조 이미지 1"></button>
-        <button class="thumb" aria-label="보조 이미지 2"></button>
-        <button class="thumb" aria-label="보조 이미지 3"></button>
-        </div>
+    
+    {% set img_list = data.img_path if data.img_path is sequence and data.img_path is not string else [data.img_path] %}
+    
+    <div class="thumbs">
+        {% for img in img_list %}
+            <button class="thumb" aria-label="이미지 {{ loop.index }}" 
+                    onclick="changeHero('{{ url_for('static', filename='images/' + img) }}')">
+                <img src="{{ url_for('static', filename='images/' + img) }}" style="width:100%; height:100%; object-fit:cover;">
+            </button>
+        {% endfor %}
+    </div>
 
-    <!-- 대표 이미지 -->
     <div class="hero">
-      <img id="heroImage" src="../../static/images/{{data.img_path}}" alt="{{ name }}" width="350" height="350">
+      <img id="heroImage" src="{{ url_for('static', filename='images/' + img_list[0]) }}" alt="{{ name }}" width="350" height="350">
     </div>
   </section>
 
@@ -60,7 +63,7 @@
                 /> 
             </svg>-->
         </button>
-        <button class="btn primary">구매하기</button>
+        <button type="button" class="btn primary" onclick="purchaseItem()">구매하기</button>
         <button class="btn" onclick='window.location.href="{{ url_for("view_review_by_item") }}"'>리뷰 보기</button>
         <!-- 12주차 과제 리뷰 등록 버튼 제거 후 다시 상품 리뷰 보기 -->
       </div>
@@ -76,12 +79,24 @@
   </section>
 </main>
 
-<!-- JS: 썸네일 클릭 시 대표 이미지 변경 -->
 <script>
   function changeHero(imageSrc) {
     const heroImg = document.getElementById("heroImage");
     heroImg.src = imageSrc;
   }
+
+  function purchaseItem() {
+    var msg = "구매하시겠습니까?\n\n" + 
+                "상품명: {{ name }}\n" + 
+                "가격: {{ data.price }}원";
+    
+    if (confirm(msg)) {
+      location.href = "{{ url_for('order_item', item_id=item_id) }}";
+    }
+  }
+
+
+
 
 // showHeart, like, unlike URL 경로를 item_id 기반으로 변경
   function showHeart() {

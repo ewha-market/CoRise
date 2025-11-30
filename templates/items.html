@@ -7,14 +7,14 @@
 {% block section %}
 <script>
   $(document).ready(function() {
-    // 1. Flask에서 전달받은 현재 값들을 Select 박스에 반영하여 상태 유지
+    // Flask에서 전달받은 현재 값들을 Select 박스에 반영하여 상태 유지
     $('#category').val('{{ category }}'); 
     $('select[name="sort"]').val('{{ sort }}');
     $('select[name="price"]').val('{{ price_order }}'); // Flask에서 price_order로 전달받음
     $('#search-query').val('{{ search_query or "" }}');
 
-    // 2. 필터 섹션의 select 요소들에 change 이벤트 리스너 추가 (활성화 및 수정)
-    // 기존 onchange="location=this.value"를 제거하고, 이 JS 로직으로 통합 처리합니다.
+    // 필터 섹션의 select 요소들에 change 이벤트 리스너 추가(활성화 및 수정)
+    // 기존 onchange="location=this.value"를 제거하고, 이 JS 로직으로 통합 처리
     $('.filters select').on('change', function() {
       submitFilters();
     });
@@ -66,6 +66,48 @@
       window.location.search = queryParams.toString();
     }
   });
+
+    function toggleLike(itemId, element) {
+        // 로그인 여부 확인(세션 정보가 없으면 알림)
+        {% if not session['id'] %}
+            alert("로그인이 필요한 기능입니다.");
+            location.href = "{{ url_for('login') }}";
+            return;
+        {% endif %}
+
+        // 현재 아이콘 상태 확인 (채워진 하트인지 아닌지)
+        let icon = $(element);
+        let isLiked = icon.hasClass('fa-heart');
+        
+        // 요청 보낼 URL 결정 (좋아요 상태면 unlike, 아니면 like)
+        let url = isLiked ? '/unlike/' + itemId + '/' : '/like/' + itemId + '/';
+        
+        // AJAX 요청 전송
+        $.ajax({
+            type: 'POST',
+            url: url,
+            data: {
+              interested: isLiked ? "N" : "Y"
+            },
+            success: function (response) {
+                // 성공 시 아이콘 스타일 토글 (새로고침 없이 즉시 반영)
+                if (isLiked) {
+                    // 찜 취소: 빨강 채워진 하트 -> 회색 빈 하트
+                    icon.removeClass('fa-heart').addClass('fa-heart-o');
+                    icon.css('color', 'grey');
+                    // alert("찜 목록에서 삭제되었습니다.");
+                } else {
+                    // 찜 하기: 회색 빈 하트 -> 빨강 채워진 하트
+                    icon.removeClass('fa-heart-o').addClass('fa-heart');
+                    icon.css('color', 'red');
+                    // alert("찜 목록에 추가되었습니다.");
+                }
+            },
+            error: function(error) {
+                alert("오류가 발생했습니다. 다시 시도해주세요.");
+            }
+        });
+    }
 </script>
 
 <div class="container">
@@ -124,18 +166,26 @@
     {% for key, value in row1 %}
     <article class="product-card" onclick="location.href='/view_detail/{{ key }}/';" style="cursor: pointer;">
       <div class="hm-thumb">
-          <img src="static/images/{{value.img_path}}" width="140" height="200" alt="{{ key }}">
+        {% set img = value.img_path[0] if value.img_path is sequence and value.img_path is not string else value.img_path %}
+        
+        <img src="{{ url_for('static', filename='images/' + img) }}" width="140" height="200" alt="{{ value.name }}">
       </div>
       <div class="info">
         <div class="text">
           <p class="product-name">{{ value.name }}</p>
           <p class="price">{{ value.price }}원</p>
         </div>
-        <button class="heart">
-          <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-            <path d="M41.68 9.22C40.6585 8.19801 39.4456 7.3873 38.1107 6.83417C36.7758 6.28105 35.345 5.99635 33.9 5.99635C32.455 5.99635 31.0242 6.28105 29.6893 6.83417C28.3544 7.3873 27.1415 8.19801 26.12 9.22L24 11.34L21.88 9.22C19.8176 7.15766 17.0167 5.99657 14.1 5.99657C11.1833 5.99657 8.38236 7.15766 6.32001 9.22C4.25766 11.2824 3.09657 14.0833 3.09657 17C3.09657 19.9167 4.25766 22.7176 6.32001 24.78L8.44001 26.9L24 42.46L39.56 26.9L41.68 24.78C42.702 23.7585 43.5127 22.5456 44.0658 21.2107C44.6189 19.8758 44.9036 18.445 44.9036 17C44.9036 15.555 44.6189 14.1242 44.0658 12.7893C43.5127 11.4544 42.702 10.2415 41.68 9.22Z" stroke="#1E1E1E" stroke-width="3" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="heart-container">
+          {% if session['id'] %}
+            {% if key in user_likes %}
+              <i class="fa fa-heart" style="color: red; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+            {% else %}
+              <i class="fa fa-heart-o" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+            {% endif %}
+          {% else %}
+            <i class="fa fa-heart-o" style="color: grey; font-size: 24px;"></i>
+          {% endif %}
+        </div>
       </div>
     </article>
     {% endfor %}
@@ -144,18 +194,26 @@
     {% for key, value in row2 %}
     <article class="product-card" onclick="location.href='/view_detail/{{ key }}/';" style="cursor: pointer;">
       <div class="hm-thumb">
-        <img src="static/images/{{value.img_path}}" width="140" height="200" alt="{{ key }}">
+         {% set img = value.img_path[0] if value.img_path is sequence and value.img_path is not string else value.img_path %}
+        
+        <img src="{{ url_for('static', filename='images/' + img) }}" width="140" height="200" alt="{{ value.name }}">
       </div>
       <div class="info">
         <div class="text">
           <p class="product-name">{{ value.name }}</p>
           <p class="price">{{ value.price }}원</p>
         </div>
-        <button class="heart">
-          <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-            <path d="M41.68 9.22C40.6585 8.19801 39.4456 7.3873 38.1107 6.83417C36.7758 6.28105 35.345 5.99635 33.9 5.99635C32.455 5.99635 31.0242 6.28105 29.6893 6.83417C28.3544 7.3873 27.1415 8.19801 26.12 9.22L24 11.34L21.88 9.22C19.8176 7.15766 17.0167 5.99657 14.1 5.99657C11.1833 5.99657 8.38236 7.15766 6.32001 9.22C4.25766 11.2824 3.09657 14.0833 3.09657 17C3.09657 19.9167 4.25766 22.7176 6.32001 24.78L8.44001 26.9L24 42.46L39.56 26.9L41.68 24.78C42.702 23.7585 43.5127 22.5456 44.0658 21.2107C44.6189 19.8758 44.9036 18.445 44.9036 17C44.9036 15.555 44.6189 14.1242 44.0658 12.7893C43.5127 11.4544 42.702 10.2415 41.68 9.22Z" stroke="#1E1E1E" stroke-width="3" stroke-linejoin="round"/>
-          </svg>
-        </button>
+        <div class="heart-container">
+          {% if session['id'] %}
+            {% if key in user_likes %}
+              <i class="fa fa-heart" style="color: red; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+            {% else %}
+              <i class="fa fa-heart-o" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+            {% endif %}
+          {% else %}
+            <i class="fa fa-heart-o" style="color: grey; font-size: 24px;"></i>
+          {% endif %}
+        </div>
       </div>
     </article>
     {% endfor %}
@@ -190,7 +248,7 @@
 
 
   {% else %}
-    <p>등록된 상품이 없습니다.</p>
+    <p>검색된 상품이 없습니다.</p>
   {% endif %}
 
 

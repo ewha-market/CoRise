@@ -63,7 +63,8 @@
       </div>
 
       <div class="rvall-media-placeholder">
-          <img src="{{ url_for('static', filename='images/' + value.img_path) }}" width="140" height="200" alt="{{ key }}">
+          {% set img = value.img_path[0] if value.img_path is sequence and value.img_path is not string else value.img_path %}
+          <img src="{{ url_for('static', filename='images/' + img) }}" width="140" height="200" alt="{{ key }}">
       </div>
     </div>
     <hr class="rvall-divider" />

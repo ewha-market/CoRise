@@ -1,4 +1,3 @@
-# database.py 파일
 import pyrebase
 import json
 import hashlib
@@ -71,7 +70,7 @@ class DBhandler:
                     return False
             return True
         
-        #닉네임 중복체크
+    #닉네임 중복체크
     def nickname_duplicate_check(self, nickname_string):
         users = self.db.child("user").get()
         if str(users.val()) == "None": # first registration
@@ -214,7 +213,29 @@ class DBhandler:
         for cat in categories_data:
             self.db.child("category").child(cat['categoryID']).set(cat)
         return True
+    
+    
 
+    # 상품 삭제
+    def delete_item(self, item_id):
+        self.db.child("item").child(item_id).remove()
+        return True
+
+    # 상품 수정
+    def update_item(self, item_id, data, img_path):
+        update_info = {
+            "name": data['name'],
+            "price": int(data['price']),
+            "category": data['category'],
+            "description": data['description'],
+            "addr": data['addr']
+        }
+        # 이미지가 새로 업로드된 경우에만 경로 업데이트
+        if img_path:
+            update_info["img_path"] = img_path
+            
+        self.db.child("item").child(item_id).update(update_info)
+        return True
 
 #----------------------------------------------------------------------------
 #Review 관련 CRUD 
@@ -245,10 +266,10 @@ class DBhandler:
             "title": data['title'],
             "rate": data['reviewStar'],
             "review": data['reviewContents'],
-            "img_path": img_path
+            "img_path": img_path,
+            "buyerID": data['buyerID']
         }
-        # self.db.child("review").child(data['name']).set(review_info)
-        self.db.child("review").push(review_info) # .push()를 사용하여 고유 ID 생성
+        self.db.child("review").child(data['name']).set(review_info)
         return True
     
     # 12주차 리뷰 조회를 위한 함수
@@ -305,15 +326,13 @@ class DBhandler:
 #----------------------------------------------------------------------------
 # Order 및 Like 관련 CRUD
 #----------------------------------------------------------------------------
-   #order 정보 insert
+   #order 정보 insert (스냅샷 데이터 포함)
     def insert_order(self, order_id, data):
-        order_info = {
-            "orderID": order_id,
-            "buyerID": data['buyerID'], 
-            "productID": data['productID'],
-            "address": data['address'],
-            "orderDate": pyrebase.database.ServerTimestamp # 서버 타임스탬프
-        }
+        order_info = data
+        # orderID와 날짜 정보만 추가
+        order_info["orderID"] = order_id
+        order_info["orderDate"] = {".sv": "timestamp"}
+
         self.db.child("Order").child(order_id).set(order_info)
         print("Order data inserted:", order_info)
         return True
@@ -341,7 +360,7 @@ class DBhandler:
         }
         self.db.child("heart").child(user_id).child(item_id).set(heart_info)
         return True
-
+    
 
 #----------------------------------------------------------------------------
 #MyPage 관련 CRUD 
@@ -364,6 +383,7 @@ class DBhandler:
         return False
     
     #구매 내역 조회
+    # 상품 테이블을 조회하는 의존성을 제거하여, 상품이 삭제되어도 내역이 보이게 함
     def get_orders_by_buyer(self, user_id):
         snap = self.db.child("Order").get()
         orders_list = []
@@ -374,18 +394,30 @@ class DBhandler:
                 # buyerID 기준으로 필터링
                 if str(order_data.get("buyerID")) != str(user_id):
                     continue
-                # 상품 정보 조회
-                product_id = order_data.get("productID")
-                if product_id:
-                    item_data = self.get_item_byname(product_id) or {}
+                
+                if 'item_name' in order_data:
+                    # 스냅샷 데이터가 있는 경우(최신 주문)
+                    pass 
                 else:
-                    item_data = {}
-                # 상품 정보
-                order_data['item_name'] = item_data.get("name", product_id)
-                order_data['item_price'] = item_data.get("price")
-                order_data['item_img'] = item_data.get("img_path")
-                order_data['seller'] = item_data.get("seller")
+                    # 예전 주문이라 스냅샷이 없는 경우 -> 상품 테이블에서 조회(호환성 유지)
+                    product_id = order_data.get("productID")
+                    # 상품 ID로 조회 시도(삭제된 상품일 수 있음)
+                    item_data = self.get_item_byid(product_id) 
+                    
+                    if item_data:
+                        order_data['item_name'] = item_data.get("name")
+                        order_data['item_price'] = item_data.get("price")
+                        order_data['item_img'] = item_data.get("img_path")
+                        order_data['seller'] = item_data.get("seller")
+                    else:
+                        order_data['item_name'] = "삭제된 상품"
+                        order_data['item_price'] = 0
+                        order_data['item_img'] = ""
+
                 orders_list.append(order_data)
+
+        # 주문 날짜 기준 내림차순 정렬(최신순)
+        orders_list.sort(key=lambda x: x.get('orderDate', 0), reverse=True)
         return orders_list
     
     #판매 내역 조회
@@ -405,6 +437,8 @@ class DBhandler:
                 item_data['item_img'] = item_data.get("img_path")
                 item_data['seller'] = item_data.get("userID") or item_data.get("seller")
                 orders_list.append(item_data)
+        # 등록일(addDate) 기준 내림차순 정렬(최신순)
+        orders_list.sort(key=lambda x: x.get('addDate', 0), reverse=True)
         return orders_list
     
     #작성한 리뷰 조회
@@ -440,9 +474,19 @@ class DBhandler:
                 interested = info.get("interested")
             else:
                 interested = info
+
             if str(interested).upper() not in ("Y", "TRUE", "1"):
                 continue
-            item_data = self.get_item_byid(product_id) or {}
+
+            # 상품 아이디로 상품 정보 조회
+            item_data = self.get_item_byid(product_id)
+            # 상품이 삭제되어(None) 정보가 없다면, 리스트에 담지 않고 건너뜀
+            if not item_data:
+                # DB에서 해당 하트(찜) 정보도 삭제
+                self.db.child("heart").child(str(user_id)).child(product_id).remove()
+                continue
+
+
             # 상품 정보
             result[product_id] = {
                 "productID": product_id,
