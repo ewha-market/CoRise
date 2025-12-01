@@ -13,15 +13,15 @@
     <span class="rvbyitem-score">{{ avg_rating|default('0.0') }}</span>
   </div>
   
-  <form class="rvbyitem-sorts" method="get" action="">
+  <form class="rvbyitem-sorts" method="get" action="{{ url_for('view_review_by_item', name=product_name) }}">
     <select class="rvbyitem-sort-cat" name="order" onchange="this.form.submit()">
-      <option value="최신순">최신순</option>
-      <option value="오래된 순">오래된 순</option>
+      <option value="최신순"  {{ 'selected' if order=='최신순' else '' }} >최신순</option>
+      <option value="오래된 순" {{ 'selected' if order=='오래된 순' else '' }} >오래된 순</option>
     </select>
 
     <select class="rvbyitem-sort-cat" name="rating" onchange="this.form.submit()">
-      <option value="별점높은순">별점높은순</option>
-      <option value="별점낮은순">별점낮은순</option>
+      <option value="별점높은순" {{ 'selected' if rating=='별점높은순' else '' }} >별점높은순</option>
+      <option value="별점낮은순"  {{ 'selected' if rating=='별점낮은순' else '' }} >별점낮은순</option>
     </select>
   </form>
 </div>
@@ -29,7 +29,7 @@
 <div class="rvall-list">
   {% if reviews %}
     {% for rid, rv in reviews.items() %}
-      <div class="rvall-card">
+      <div class="rvall-card" onclick="location.href='{{ url_for('view_review_detail', key=rid) }}';" style="cursor:pointer;">
         <div class="rvall-card-content-wrapper">
 
           <div class="rvall-main-content">
@@ -42,18 +42,19 @@
             <div class="rvall-review-title-section">
               <h3 class="rvall-review-title">{{ rv.title }}</h3>
               <div class="rvall-rating">
-                {% for i in range(rv.rate|int) %}
-                  <span class="star">★</span>
+                {% set rating = (rv.rate or rv.rating or 0) | int %}
+                {% for i in range(rating) %}
+                  <span class="star star--filled">★</span>
                 {% endfor %}
-                {% for i in range(5 - rv.rate|int) %}
-                  <span class="star star--empty">★</span>
+                {% for i in range(5 - rating) %}
+                  <span class="star star--empty">☆</span>
                 {% endfor %}
               </div>
             </div>
 
             <div class="rvall-review-text-block">
               <p class="rvall-review-text">
-                {{ rv.content | replace('\n', '<br>') | safe }}
+                {{ rv.review | replace('\n', '<br>') | safe }}
               </p>
             </div>
           </div>
@@ -70,22 +71,31 @@
       </div>
     {% endfor %}
   {% else %}
-    <p>등록된 리뷰가 없습니다.</p>
+    <p class="norv-text">등록된 리뷰가 없습니다.</p>
   {% endif %}
 
-  <!-- 페이지네이션, 추후 수정 -->
+  <!-- 페이지네이션 -->
   <nav class="pagination">
-    {# if current_page > 1 #}
-    <a class="page-btn" href="#">&lsaquo;</a>
-    {# endif #} {# for p in pages #}
-    <a class="page-number active" href="#">1</a>
-    <a class="page-number" href="#">2</a>
-    <a class="page-number" href="#">3</a>
-    <span>…</span>
-    <a class="page-number" href="#">10</a>
-    {# endfor #} {# if current_page < total_pages #}
-    <a class="page-btn" href="#">&rsaquo;</a>
-    {# endif #}
+    {% if page > 0 %}
+      <a class="page-btn"
+         href="{{ url_for('view_review_by_item', name=product_name, page=page-1, order=order, rating=rating) }}">&lsaquo;</a>
+    {% else %}
+      <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
+    {% endif %}
+
+    {% for i in range(page_count) %}
+      <a class="page-number {% if i == page %}active{% endif %}"
+         href="{{ url_for('view_review_by_item', name=product_name, page=i, order=order, rating=rating) }}">
+        {{ i + 1 }}
+      </a>
+    {% endfor %}
+
+    {% if page < page_count - 1 %}
+      <a class="page-btn"
+         href="{{ url_for('view_review_by_item', name=product_name, page=page+1, order=order, rating=rating) }}">&rsaquo;</a>
+    {% else %}
+      <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
+    {% endif %}
   </nav>
 </div>
 {% endblock section %}

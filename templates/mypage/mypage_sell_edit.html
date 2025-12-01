@@ -1,10 +1,18 @@
 {% extends "index.html" %} 
 {% block head %} 
 {{ super() }}
+    <link rel="stylesheet"  href="{{ url_for('static', filename='review_style.css') }}">
     <link rel="stylesheet"  href="{{ url_for('static', filename='mypage1_1.css') }}">
     {% endblock head %} 
 
 {% block section %}
+
+{% set raw_imgs = data.img_path or [] %}
+{% if raw_imgs is string %}
+  {% set imgs = [raw_imgs] %}
+{% else %}
+  {% set imgs = raw_imgs %}
+{% endif %}
 
 <div>
     <main class="product-create">
@@ -62,6 +70,22 @@
               <span class="pc-hint">*파일을 선택하지 않으면 기존 사진이 유지됩니다.</span>
             </div>
             
+            <div class="photo-preview-wrap">
+              {% for i in range(5) %}
+                {% set filename = (imgs[i] if imgs and imgs|length > i else '') %}
+                <div class="photo-box"
+                    data-existing="{{ '1' if filename else '0' }}"
+                    data-filename="{{ filename }}">
+                  {% if filename %}
+                    <img src="{{ url_for('static', filename='images/' + filename) }}"
+                        alt="리뷰 이미지 {{ i+1 }}"
+                        data-existing="1">
+                    <input type="hidden" name="existing_images" value="{{ filename }}">
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+            <!--
             <div style="margin-top: 10px;">
                 <p style="font-size: 0.9em; color: #666;">현재 이미지:</p>
                 {% if data.img_path %}
@@ -77,6 +101,7 @@
                     <span>이미지 없음</span>
                 {% endif %}
             </div>
+          -->
           </div>
         </div>
         
@@ -94,4 +119,133 @@
     </div>
     </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const MAX_IMAGES = 5;
+  const fileInput = document.getElementById('img');          // 파일 인풋
+  const previewBoxes = Array.from(document.querySelectorAll('.photo-box')); // 5칸
+  const form = document.querySelector('.pc-form');
+  let selectedFiles = [];  // 새로 업로드한 파일만 관리
+
+  // 현재 남아 있는 기존 이미지 개수
+  const getExistingCount = () =>
+    previewBoxes.reduce((cnt, box) => {
+      const img = box.querySelector('img[data-existing="1"]');
+      return cnt + (img ? 1 : 0);
+    }, 0);
+
+  // file input 의 FileList 를 selectedFiles 와 동기화
+  const syncFileInput = () => {
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+  };
+
+  // 새로 업로드한 이미지들을 preview 에 다시 그리기
+  const renderNewPreviews = () => {
+    // 기존 "새 이미지" 프리뷰 제거 (data-new="1" 만)
+    previewBoxes.forEach(box => {
+      const newImg = box.querySelector('img[data-new="1"]');
+      if (newImg) newImg.remove();
+    });
+
+    // img 태그가 전혀 없는 박스들만 새 이미지 채우기용으로 사용
+    const emptyBoxes = previewBoxes.filter(box => !box.querySelector('img'));
+
+    selectedFiles.forEach((file, idx) => {
+      if (!emptyBoxes[idx]) return; // 빈 칸이 없으면 무시
+
+      const img = document.createElement('img');
+      img.alt = '새 상품 이미지';
+      img.dataset.new = '1';
+      img.dataset.index = idx;          // selectedFiles 인덱스
+      img.src = URL.createObjectURL(file);
+      img.onload = () => URL.revokeObjectURL(img.src); // 메모리 정리 (옵션)
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+
+      emptyBoxes[idx].appendChild(img);
+    });
+  };
+
+  // 파일 선택 시
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+
+      const existingCount = getExistingCount();
+      const freeSlots = MAX_IMAGES - existingCount - selectedFiles.length;
+
+      if (freeSlots <= 0) {
+        alert('이미지는 최대 5장까지 등록할 수 있습니다.');
+        fileInput.value = '';
+        return;
+      }
+
+      const addable = files.slice(0, freeSlots);
+      if (addable.length < files.length) {
+        alert('이미지는 최대 5장까지 등록할 수 있습니다.');
+      }
+
+      selectedFiles = selectedFiles.concat(addable);
+      syncFileInput();
+      renderNewPreviews();
+    });
+  }
+
+  // 프리뷰 박스 클릭 → 이미지 삭제
+  previewBoxes.forEach((box) => {
+    box.addEventListener('click', () => {
+      const img = box.querySelector('img');
+      if (!img) return;
+
+      // 1) 기존 이미지 삭제
+      if (img.dataset.existing === '1') {
+        if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+
+        // hidden input(existing_images) 제거
+        const hidden = box.querySelector('input[name="existing_images"]');
+        if (hidden) hidden.remove();
+
+        img.remove();
+        box.dataset.existing = '0';
+        box.dataset.filename = '';
+
+        return;
+      }
+
+      // 2) 새로 추가한 이미지 삭제
+      if (img.dataset.new === '1') {
+        if (!confirm('이 사진을 삭제하시겠습니까?')) return;
+
+        const idx = Number(img.dataset.index);
+        if (!Number.isNaN(idx)) {
+          selectedFiles.splice(idx, 1); // 배열에서 제거
+          syncFileInput();
+          renderNewPreviews();          // 인덱스가 바뀌었으니 다시 그리기
+        }
+      }
+    });
+  });
+
+  // 최소 1장 이미지는 있어야 수정 완료 가능
+  if (form) {
+    form.addEventListener('submit', (e) => {
+      const existingCount = getExistingCount();
+      const newCount = selectedFiles.length;
+      const total = existingCount + newCount;
+
+      if (total === 0) {
+        e.preventDefault();
+        alert('최소 1장의 사진을 등록해야 상품을 수정할 수 있습니다.');
+      }
+    });
+  }
+});
+</script>
+
+
 {% endblock section %}

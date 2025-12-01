@@ -231,7 +231,7 @@ class DBhandler:
             "addr": data['addr']
         }
         # 이미지가 새로 업로드된 경우에만 경로 업데이트
-        if img_path:
+        if img_path is not None:
             update_info["img_path"] = img_path
             
         self.db.child("item").child(item_id).update(update_info)
@@ -278,21 +278,24 @@ class DBhandler:
         return self.db.child("review").child(review_id).get().val()
     
     # 리뷰 수정
-    def update_review(self, review_id, update_data, new_img_urls=None):
+    def update_review(self, review_id, update_data, img_paths=None):
         review_ref = self.db.child("review").child(review_id)
         
         # 수정할 데이터 딕셔너리 구성 (Rating은 int로 변환)
         data_to_update = {}
-        for key, value in update_data.items():
-            if key in ['rating'] and value:
-                data_to_update[key] = int(value)
-            elif key in ['title', 'description'] and value:
-                data_to_update[key] = value
-                
-        if new_img_urls:
-             data_to_update['image'] = new_img_urls
         
-        # Firebase 업데이트 실행
+        if update_data.get('rating'):
+            data_to_update['rate'] = int(update_data['rating'])
+
+        if update_data.get('title'):
+            data_to_update['title'] = update_data['title']
+
+        if update_data.get('content'):
+            data_to_update['review'] = update_data['content']
+
+        if img_paths is not None:
+            data_to_update['img_path'] = img_paths
+        
         if data_to_update:
             review_ref.update(data_to_update)
             return True
@@ -374,16 +377,17 @@ class DBhandler:
                 # buyerID 기준으로 필터링
                 if str(order_data.get("buyerID")) != str(user_id):
                     continue
+
+                product_id = order_data.get("productID")
+                # 상품 ID로 조회 시도(삭제된 상품일 수 있음)
+                item_data = self.get_item_byid(product_id) 
+                order_data['is_deleted'] = (item_data is None)
                 
                 if 'item_name' in order_data:
                     # 스냅샷 데이터가 있는 경우(최신 주문)
                     pass 
                 else:
-                    # 예전 주문이라 스냅샷이 없는 경우 -> 상품 테이블에서 조회(호환성 유지)
-                    product_id = order_data.get("productID")
-                    # 상품 ID로 조회 시도(삭제된 상품일 수 있음)
-                    item_data = self.get_item_byid(product_id) 
-                    
+                    # 예전 주문이라 스냅샷이 없는 경우 -> 상품 테이블에서 조회(호환성 유지) 
                     if item_data:
                         order_data['item_name'] = item_data.get("name")
                         order_data['item_price'] = item_data.get("price")
