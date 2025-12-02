@@ -133,7 +133,7 @@ class DBhandler:
         return likes_count
     
     # 상품 목록 조회 및 정렬 통합
-    def get_item_list(self, category="all", sort="latest", price_order="low", search_query=""):
+    def get_item_list(self, category="all", sort="latest", search_query=""):
         items_snap = self.db.child("item").get()
         data = items_snap.val() or {} # data 변수에 모든 상품 정보 저장
         
@@ -158,42 +158,53 @@ class DBhandler:
             query = search_query.lower().strip()
             for key, value in filtered_items.items():
                 item_name = value.get('name', '').lower()
-                # 상품 설명에서도 검색 <- 제거 오직 상품명으로만 검색
-                # item_desc = value.get('description', '').lower()
-                # 상품명 또는 상품 설명에 검색어가 포함되어 있는지 확인
-                # if query in item_name or query in item_desc:
                 if query in item_name:
                     temp_filtered_items[key] = value
             filtered_items = temp_filtered_items # 검색 결과로 업데이트
 
         items_list = list(filtered_items.items())
 
-        # 정렬 (최신순 또는 인기순)
-        if sort == "latest": # 최신순 (addDate 기준 내림차순, Firebase timestamp)
+        # ---- 통합 정렬 ----
+        # 가격 값을 int로 변환하는 헬퍼 함수
+        def get_safe_price(item, default=sys.maxsize):
+            price_str = item[1].get('price')
+            if not price_str:
+                return default
+            try:
+                return int(price_str)
+            except ValueError:
+                return default
+
+        if sort == "low":  # 낮은 가격 순 (2차 기준 : 등록)
+            # 가격 낮은 순 (오름차순: reverse=False)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('addDate', 0), 
-                                       reverse=True)
-        elif sort == "popular": # 인기순 (likes 기준 내림차순)
+                                    key=lambda item: (
+                                        get_safe_price(item, sys.maxsize),
+                                        -item[1].get('addDate', 0)
+                                    ), 
+                                    reverse=False)
+        elif sort == "high": # 높은 가격 순
+            # 가격 높은 순 (내림차순: reverse=True)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('likes', 0), 
-                                       reverse=True)
-        else: # 기본 정렬: 최신순
+                                    key=lambda item: (
+                                        get_safe_price(item, 0),
+                                        -item[1].get('addDate', 0)
+                                    ), 
+                                    reverse=True)
+        elif sort == "popular": 
+            # 인기순 (likes 기준 내림차순, 동일할 경우 2차 기준: 가격 낮은 순)
+            sorted_items_list = sorted(
+                items_list,
+                key=lambda item: (-item[1].get('likes', 0), get_safe_price(item, sys.maxsize)) 
+            )
+        else: # sort == "latest" (기본값)
+            # 최신순 (addDate 기준 내림차순)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('addDate', 0), 
-                                       reverse=True)
+                                    key=lambda item: item[1].get('addDate', 0), 
+                                    reverse=True)
             
-        # 가격 정렬 (2차 정렬 또는 독립적 정렬)
-        if price_order == "low": # 낮은 가격 순 (오름차순)
-            sorted_items_list = sorted(sorted_items_list, 
-                                       key=lambda item: item[1].get('price', sys.maxsize), 
-                                       reverse=False)
-        elif price_order == "high": # 높은 가격 순 (내림차순)
-            sorted_items_list = sorted(sorted_items_list, 
-                                       key=lambda item: item[1].get('price', 0), 
-                                       reverse=True)
-        
         return dict(sorted_items_list)
-    
+
     #카테고리별 상품 조회
     def get_items_bycategory(self, cate):
         return self.get_item_list(category=cate)
@@ -231,7 +242,7 @@ class DBhandler:
             "addr": data['addr']
         }
         # 이미지가 새로 업로드된 경우에만 경로 업데이트
-        if img_path:
+        if img_path is not None:
             update_info["img_path"] = img_path
             
         self.db.child("item").child(item_id).update(update_info)
@@ -240,79 +251,62 @@ class DBhandler:
 #----------------------------------------------------------------------------
 #Review 관련 CRUD 
 #----------------------------------------------------------------------------            
-    #리뷰 등록
-    def insert_review(self, review_id, data, img_urls):
+    # 리뷰 등록 (다중 이미지 + 고유 ID 생성)
+    def reg_review(self, data, img_paths):
         review_info = {
-            "reviewID": review_id,
-            "orderID": data['orderID'], 
+            "title": data['title'],
+            "rate": int(data['rating']),
+            "review": data['content'],
+            "img_path": img_paths,
             "buyerID": data['buyerID'],
             "productID": data['productID'],
-            "title": data['title'],
-            "rating": int(data['rating']), 
-            "description": data['description'],
-            "image": img_urls, 
-            "addDate": pyrebase.database.ServerTimestamp
+            "timestamp": {".sv": "timestamp"}
         }
 
-        self.db.child("Review").child(review_id).set(review_info)
-        print("Review data inserted:", review_info)
+        self.db.child("review").push(review_info)
         return True
     
-    # 12주차 리뷰 등록
-    def reg_review(self, data, img_path):
-        review_info ={
-            # 상품 id 추가
-            "item_id": data['item_id'],
-            "title": data['title'],
-            "rate": data['reviewStar'],
-            "review": data['reviewContents'],
-            "img_path": img_path,
-            "buyerID": data['buyerID']
-        }
-        self.db.child("review").child(data['name']).set(review_info)
-        return True
-    
-    # 12주차 리뷰 조회를 위한 함수
-    def get_reviews(self):
-        # "review" 테이블의 모든 데이터를 가져오기
+    # 리뷰 전체 조회
+    def get_reviews(self, sort_key='timestamp', reverse=True):
         reviews = self.db.child("review").get().val()
-        # 데이터가 없는 경우 빈 딕셔너리를 반환
-        return reviews if reviews else {}
-
-
-    # 상품별 리뷰 조회 (정렬 포함)
-    def get_reviews_by_product(self, product_id, sort_by='addDate', order='desc'):
-        reviews_ref = self.db.child("Review")
         
-        # productID를 기준으로 필터링하여 쿼리 실행
-        query = reviews_ref.order_by_child("productID").equal_to(product_id).get()
+        if not reviews:
+            return {}
+
+        reviews_list = list(reviews.items())
         
-        reviews_list = []
-        for review in query.each():
-            reviews_list.append(review.val())
-            
-        # Python에서 정렬 (Timestamp는 Firebase에서 오름차순으로만 정렬되므로 Python 정렬 사용)
-        if sort_by == 'addDate' or sort_by == 'rating':
-            reviews_list.sort(key=lambda x: x.get(sort_by, 0), reverse=(order=='desc'))
-            
-        return reviews_list
+        # 정렬 로직
+        # sort_key가 'rate'면 별점순, 'timestamp'면 최신순
+        try:
+            reviews_list.sort(key=lambda x: int(x[1].get(sort_key, 0)), reverse=reverse)
+        except ValueError:
+            reviews_list.sort(key=lambda x: 0, reverse=reverse)
+        
+        return dict(reviews_list)
+
+    # 리뷰 상세 조회
+    def get_review_by_id(self, review_id):
+        return self.db.child("review").child(review_id).get().val()
     
     # 리뷰 수정
-    def update_review(self, review_id, update_data, new_img_urls=None):
-        review_ref = self.db.child("Review").child(review_id)
+    def update_review(self, review_id, update_data, img_paths=None):
+        review_ref = self.db.child("review").child(review_id)
         
         # 수정할 데이터 딕셔너리 구성 (Rating은 int로 변환)
         data_to_update = {}
-        for key, value in update_data.items():
-            if key in ['rating'] and value:
-                data_to_update[key] = int(value)
-            elif key in ['title', 'description'] and value:
-                data_to_update[key] = value
-                
-        if new_img_urls:
-             data_to_update['image'] = new_img_urls
         
-        # Firebase 업데이트 실행
+        if update_data.get('rating'):
+            data_to_update['rate'] = int(update_data['rating'])
+
+        if update_data.get('title'):
+            data_to_update['title'] = update_data['title']
+
+        if update_data.get('content'):
+            data_to_update['review'] = update_data['content']
+
+        if img_paths is not None:
+            data_to_update['img_path'] = img_paths
+        
         if data_to_update:
             review_ref.update(data_to_update)
             return True
@@ -320,7 +314,7 @@ class DBhandler:
 
     # 리뷰 삭제
     def delete_review(self, review_id):
-        self.db.child("Review").child(review_id).remove()
+        self.db.child("review").child(review_id).remove()
         return True
     
 #----------------------------------------------------------------------------
@@ -394,16 +388,17 @@ class DBhandler:
                 # buyerID 기준으로 필터링
                 if str(order_data.get("buyerID")) != str(user_id):
                     continue
+
+                product_id = order_data.get("productID")
+                # 상품 ID로 조회 시도(삭제된 상품일 수 있음)
+                item_data = self.get_item_byid(product_id) 
+                order_data['is_deleted'] = (item_data is None)
                 
                 if 'item_name' in order_data:
                     # 스냅샷 데이터가 있는 경우(최신 주문)
                     pass 
                 else:
-                    # 예전 주문이라 스냅샷이 없는 경우 -> 상품 테이블에서 조회(호환성 유지)
-                    product_id = order_data.get("productID")
-                    # 상품 ID로 조회 시도(삭제된 상품일 수 있음)
-                    item_data = self.get_item_byid(product_id) 
-                    
+                    # 예전 주문이라 스냅샷이 없는 경우 -> 상품 테이블에서 조회(호환성 유지) 
                     if item_data:
                         order_data['item_name'] = item_data.get("name")
                         order_data['item_price'] = item_data.get("price")
