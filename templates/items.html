@@ -10,7 +10,6 @@
     // Flask에서 전달받은 현재 값들을 Select 박스에 반영하여 상태 유지
     $('#category').val('{{ category }}'); 
     $('select[name="sort"]').val('{{ sort }}');
-    $('select[name="price"]').val('{{ price_order }}'); // Flask에서 price_order로 전달받음
     $('#search-query').val('{{ search_query or "" }}');
 
     // 필터 섹션의 select 요소들에 change 이벤트 리스너 추가(활성화 및 수정)
@@ -25,16 +24,15 @@
             submitFilters();
         }
     });
+
     function submitFilters() {
       // 선택된 값들을 가져옴 
       const category = $('select[name="category"]').val();
       const sort = $('select[name="sort"]').val();
-      const price_order = $('select[name="price"]').val();
       const search_query = $('#search-query').val().trim();
 
       // 현재 페이지 URL을 기반으로 쿼리 매개변수 객체 생성
       let queryParams = new URLSearchParams(window.location.search);
-      
       // 필터/정렬 변경 시 페이지를 0으로 리셋
       queryParams.set('page', 0);
       
@@ -48,12 +46,6 @@
           queryParams.set('sort', sort);
       } else {
           queryParams.delete('sort');
-      }
-
-      if (price_order && price_order !== 'low') { 
-          queryParams.set('price', price_order); // app.py의 request.args.get("price")와 일치
-      } else {
-          queryParams.delete('price');
       }
 
       if (search_query) { 
@@ -77,7 +69,9 @@
 
         // 현재 아이콘 상태 확인 (채워진 하트인지 아닌지)
         let icon = $(element);
-        let isLiked = icon.hasClass('fa-heart');
+
+        // 상태는 색상 기준 (빨강이면 찜한 상태)
+        let isLiked = icon.css('color') === 'rgb(255, 0, 0)';
         
         // 요청 보낼 URL 결정 (좋아요 상태면 unlike, 아니면 like)
         let url = isLiked ? '/unlike/' + itemId + '/' : '/like/' + itemId + '/';
@@ -92,15 +86,11 @@
             success: function (response) {
                 // 성공 시 아이콘 스타일 토글 (새로고침 없이 즉시 반영)
                 if (isLiked) {
-                    // 찜 취소: 빨강 채워진 하트 -> 회색 빈 하트
-                    icon.removeClass('fa-heart').addClass('fa-heart-o');
+                    // 찜 취소: 빨강 -> 회색
                     icon.css('color', 'grey');
-                    // alert("찜 목록에서 삭제되었습니다.");
                 } else {
-                    // 찜 하기: 회색 빈 하트 -> 빨강 채워진 하트
-                    icon.removeClass('fa-heart-o').addClass('fa-heart');
+                    // 찜 하기: 회색 -> 빨강
                     icon.css('color', 'red');
-                    // alert("찜 목록에 추가되었습니다.");
                 }
             },
             error: function(error) {
@@ -136,20 +126,11 @@
         </svg>
       </label>
 
-      <!-- 최신순 -->
+      <!-- 정렬 필터 통합 -->
       <label class="select-pill">
-        <select name="sort" aria-label="정렬">
+        <select name="sort" id="sort-order" aria-label="정렬">
           <option value="latest">최신순</option>
           <option value="popular">인기순</option>
-        </select>
-        <svg class="chev" width="22" height="16" viewBox="0 0 28 19" fill="none" aria-hidden="true">
-          <path d="M13.2826 18.1387C13.4826 18.4042 13.8813 18.404 14.0814 18.1387L26.7621 1.30078C27.0102 0.97129 26.7751 0.5 26.3627 0.5H1.00134C0.589257 0.500359 0.354175 0.971424 0.601929 1.30078L13.2826 18.1387Z" fill="#FBFAF4" stroke="black"/>
-        </svg>
-      </label>
-
-      <!-- 낮은 가격 순 -->
-      <label class="select-pill">
-        <select name="price" aria-label="가격 정렬">
           <option value="low">낮은 가격 순</option>
           <option value="high">높은 가격 순</option>
         </select>
@@ -167,23 +148,24 @@
     <article class="product-card" onclick="location.href='/view_detail/{{ key }}/';" style="cursor: pointer;">
       <div class="hm-thumb">
         {% set img = value.img_path[0] if value.img_path is sequence and value.img_path is not string else value.img_path %}
-        
         <img src="{{ url_for('static', filename='images/' + img) }}" width="140" height="200" alt="{{ value.name }}">
       </div>
+
       <div class="info">
         <div class="text">
           <p class="product-name">{{ value.name }}</p>
           <p class="price">{{ value.price }}원</p>
         </div>
+
         <div class="heart-container">
           {% if session['id'] %}
             {% if key in user_likes %}
               <i class="fa fa-heart" style="color: red; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
             {% else %}
-              <i class="fa fa-heart-o" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+              <i class="fa fa-heart" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
             {% endif %}
           {% else %}
-            <i class="fa fa-heart-o" style="color: grey; font-size: 24px;"></i>
+            <i class="fa fa-heart" style="color: grey; font-size: 24px;"></i>
           {% endif %}
         </div>
       </div>
@@ -208,10 +190,10 @@
             {% if key in user_likes %}
               <i class="fa fa-heart" style="color: red; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
             {% else %}
-              <i class="fa fa-heart-o" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
+              <i class="fa fa-heart" style="color: grey; cursor: pointer; font-size: 24px;" onclick="toggleLike('{{ key }}', this); event.stopPropagation();"></i>
             {% endif %}
           {% else %}
-            <i class="fa fa-heart-o" style="color: grey; font-size: 24px;"></i>
+            <i class="fa fa-heart" style="color: grey; font-size: 24px;"></i>
           {% endif %}
         </div>
       </div>
@@ -229,7 +211,6 @@
                      page=page-1,
                      category=category,
                      sort=sort,
-                     price=price_order,
                      q=search_query) }}">&lsaquo;</a>
       {% else %}
         <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
@@ -242,7 +223,6 @@
                      page=i,
                      category=category,
                      sort=sort,
-                     price=price_order,
                      q=search_query) }}">
           {{ i + 1 }}
         </a>
@@ -255,7 +235,6 @@
                      page=page+1,
                      category=category,
                      sort=sort,
-                     price=price_order,
                      q=search_query) }}">&rsaquo;</a>
       {% else %}
         <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
@@ -265,7 +244,9 @@
 
 
   {% else %}
-    <p>검색된 상품이 없습니다.</p>
+    <div style="text-align: center; margin-top: 50px; color: #666;">
+      <p style="font-size: 18px;">등록된 상품이 없습니다.</p>
+    </div>
   {% endif %}
 
 

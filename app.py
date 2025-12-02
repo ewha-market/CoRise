@@ -23,7 +23,6 @@ def view_list():
     category = request.args.get("category", "all")
     # 정렬 및 가격 정렬 매개변수 추가 (URL 파라미터: sort, price)
     sort = request.args.get("sort", "latest")
-    price_order = request.args.get("price", "low")
     search_query = request.args.get("q", "") 
 
     per_page=8
@@ -32,7 +31,7 @@ def view_list():
     start_idx=per_page*page
 
     # DB 함수 호출: 카테고리, 정렬, 가격 정렬 매개변수 전달
-    data_sorted = DB.get_item_list(category=category, sort=sort, price_order=price_order, search_query=search_query)    
+    data_sorted = DB.get_item_list(category=category, sort=sort, search_query=search_query)    
     # 기존 수동 정렬 및 category 분기 로직 제거됨
 
     item_counts = len(data_sorted)
@@ -76,7 +75,6 @@ def view_list():
         category=category,
         # 정렬 및 가격 정렬 매개변수 추가 전달
         sort=sort,
-        price_order=price_order,
         search_query=search_query,
         user_likes=user_likes
     )
@@ -841,19 +839,3 @@ def delete_review(key):
 
 if __name__ == "__main__":
     application.run(host='0.0.0.0')
-
-
-# 페이지네이션 중복 제거 헬퍼 함수
-def paginate_data(data, page, per_page):
-    item_counts = len(data)
-    # 전체 페이지 수 계산
-    page_count = math.ceil(item_counts / per_page)
-    
-    start_idx = per_page * page
-    end_idx = per_page * (page + 1)
-    
-    # 딕셔너리를 리스트로 변환 후 슬라이싱
-    data_list = list(data.items())
-    current_page_data = dict(data_list[start_idx:end_idx])
-    
-    return current_page_data, page_count, item_counts

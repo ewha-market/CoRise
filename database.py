@@ -133,7 +133,7 @@ class DBhandler:
         return likes_count
     
     # 상품 목록 조회 및 정렬 통합
-    def get_item_list(self, category="all", sort="latest", price_order="low", search_query=""):
+    def get_item_list(self, category="all", sort="latest", search_query=""):
         items_snap = self.db.child("item").get()
         data = items_snap.val() or {} # data 변수에 모든 상품 정보 저장
         
@@ -158,42 +158,53 @@ class DBhandler:
             query = search_query.lower().strip()
             for key, value in filtered_items.items():
                 item_name = value.get('name', '').lower()
-                # 상품 설명에서도 검색 <- 제거 오직 상품명으로만 검색
-                # item_desc = value.get('description', '').lower()
-                # 상품명 또는 상품 설명에 검색어가 포함되어 있는지 확인
-                # if query in item_name or query in item_desc:
                 if query in item_name:
                     temp_filtered_items[key] = value
             filtered_items = temp_filtered_items # 검색 결과로 업데이트
 
         items_list = list(filtered_items.items())
 
-        # 정렬 (최신순 또는 인기순)
-        if sort == "latest": # 최신순 (addDate 기준 내림차순, Firebase timestamp)
+        # ---- 통합 정렬 ----
+        # 가격 값을 int로 변환하는 헬퍼 함수
+        def get_safe_price(item, default=sys.maxsize):
+            price_str = item[1].get('price')
+            if not price_str:
+                return default
+            try:
+                return int(price_str)
+            except ValueError:
+                return default
+
+        if sort == "low":  # 낮은 가격 순 (2차 기준 : 등록)
+            # 가격 낮은 순 (오름차순: reverse=False)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('addDate', 0), 
-                                       reverse=True)
-        elif sort == "popular": # 인기순 (likes 기준 내림차순)
+                                    key=lambda item: (
+                                        get_safe_price(item, sys.maxsize),
+                                        -item[1].get('addDate', 0)
+                                    ), 
+                                    reverse=False)
+        elif sort == "high": # 높은 가격 순
+            # 가격 높은 순 (내림차순: reverse=True)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('likes', 0), 
-                                       reverse=True)
-        else: # 기본 정렬: 최신순
+                                    key=lambda item: (
+                                        get_safe_price(item, 0),
+                                        -item[1].get('addDate', 0)
+                                    ), 
+                                    reverse=True)
+        elif sort == "popular": 
+            # 인기순 (likes 기준 내림차순, 동일할 경우 2차 기준: 가격 낮은 순)
+            sorted_items_list = sorted(
+                items_list,
+                key=lambda item: (-item[1].get('likes', 0), get_safe_price(item, sys.maxsize)) 
+            )
+        else: # sort == "latest" (기본값)
+            # 최신순 (addDate 기준 내림차순)
             sorted_items_list = sorted(items_list, 
-                                       key=lambda item: item[1].get('addDate', 0), 
-                                       reverse=True)
+                                    key=lambda item: item[1].get('addDate', 0), 
+                                    reverse=True)
             
-        # 가격 정렬 (2차 정렬 또는 독립적 정렬)
-        if price_order == "low": # 낮은 가격 순 (오름차순)
-            sorted_items_list = sorted(sorted_items_list, 
-                                       key=lambda item: item[1].get('price', sys.maxsize), 
-                                       reverse=False)
-        elif price_order == "high": # 높은 가격 순 (내림차순)
-            sorted_items_list = sorted(sorted_items_list, 
-                                       key=lambda item: item[1].get('price', 0), 
-                                       reverse=True)
-        
         return dict(sorted_items_list)
-    
+
     #카테고리별 상품 조회
     def get_items_bycategory(self, cate):
         return self.get_item_list(category=cate)

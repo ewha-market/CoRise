@@ -33,12 +33,11 @@
               <p class="product-name">{{ item.name }}</p>
               <p class="price">{{ item.price }}원</p>
           </div>
-          <button class="heart" onclick="event.stopPropagation(); toggleLike('{{ item.productID }}')">
-              <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                  <path d="M41.68 9.22..." fill="red" /> </svg>
+          <button class="heart" onclick="event.stopPropagation(); toggleLike('{{ item.productID }}', this)" style="border: none; background: none; cursor: pointer;">
+            <i class="fa fa-heart" style="color: red; font-size: 20px;"></i>
           </button>
       </div>
-  </article>
+    </article>
     {% endfor %}
 
     <!-- Row 2 -->
@@ -60,45 +59,70 @@
               <p class="product-name">{{ item.name }}</p>
               <p class="price">{{ item.price }}원</p>
           </div>
-          <button class="heart" onclick="event.stopPropagation(); toggleLike('{{ item.productID }}')">
-              <svg width="24" height="24" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                  <path d="M41.68 9.22..." fill="red" /> </svg>
+          <button class="heart" onclick="event.stopPropagation(); toggleLike('{{ item.productID }}', this)" style="border: none; background: none; cursor: pointer;">
+            <i class="fa fa-heart" style="color: red; font-size: 20px;"></i>
           </button>
       </div>
-  </article>
+    </article>
     {% endfor %}
   
   </div>
-  {% endif %}
- 
 
   <!-- 페이지네이션 -->
   <nav class="pagination">
+    <!-- 이전 페이지 버튼 -->
+    {% if page > 0 %}
+    <a class="page-btn" href="{{ url_for('mypage_like', page=page-1) }}">&lsaquo;</a>
+    {% else %}
+    <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
+    {% endif %}
 
-      <!-- 이전 페이지 버튼 -->
-      {% if page > 0 %}
-      <a class="page-btn" href="{{ url_for('mypage_like', page=page-1) }}">&lsaquo;</a>
-      {% else %}
-      <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
-      {% endif %}
+    <!-- 페이지 번호 반복 -->
+    {% for i in range(page_count) %}
+    <a class="page-number {% if i == page %}active{% endif %}" 
+        href="{{ url_for('mypage_like', page=i) }}">
+        {{ i + 1 }}
+    </a>
+    {% endfor %}
 
-      <!-- 페이지 번호 반복 -->
-      {% for i in range(page_count) %}
-      <a class="page-number {% if i == page %}active{% endif %}" 
-          href="{{ url_for('mypage_like', page=i) }}">
-          {{ i + 1 }}
-      </a>
-      {% endfor %}
-
-      <!-- 다음 페이지 버튼 -->
-      {% if page < page_count - 1 %}
-      <a class="page-btn" href="{{ url_for('mypage_like', page=page+1) }}">&rsaquo;</a>
-      {% else %}
-      <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
-      {% endif %}
-
+    <!-- 다음 페이지 버튼 -->
+    {% if page < page_count - 1 %}
+    <a class="page-btn" href="{{ url_for('mypage_like', page=page+1) }}">&rsaquo;</a>
+    {% else %}
+    <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
+    {% endif %}
   </nav>
 
+  {% else %}
+  <div style="text-align: center; margin-top: 50px; color: #666;">
+      <p style="font-size: 18px;">찜한 상품이 없습니다.</p>
+  </div>
+  {% endif %}
+
+</div>
+
 </main>
+<script>
+function toggleLike(item_id, btn) {
+    var icon = $(btn).find('i');
+    var currentColor = icon.css('color');
+    
+    if (currentColor === 'rgb(255, 0, 0)' || currentColor === 'red') {
+        $.ajax({
+            type: 'POST',
+            url: '/unlike/' + item_id + '/',
+            data: { interested : "N" },
+            success: function (response) {
+                $(btn).closest('.product-card').remove();
+                
+                // 삭제 후 남은 카드가 없으면 빈 화면 안내를 위한 페이지 새로고침
+                if ($('.product-card').length === 0) {
+                    window.location.reload(); 
+                }
+            }
+        });
+    }
+}
+</script>
 
 {% endblock section %}

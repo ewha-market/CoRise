@@ -127,8 +127,9 @@
       interested : "Y"
       },
       success: function (response) {
-        alert(response['msg']);
-        window.location.reload()
+        // 하트 즉시 채우기
+        $("#heart").css("color","red");
+        $("#heart").attr("onclick","unlike()");
       }
     });
   }
@@ -141,8 +142,9 @@
       interested : "N"
       },
       success: function (response) {
-        alert(response['msg']);
-        window.location.reload()
+        // 하트 즉시 비우기
+        $("#heart").css("color","grey");
+        $("#heart").attr("onclick","like()");
       }
     });
   }
