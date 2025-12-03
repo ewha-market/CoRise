@@ -231,16 +231,24 @@
 }
 
 /*-----------------상품 등록-------------------*/
+.reg-container {
+    transform: scale(0.85);  
+    transform-origin: top center; 
+    width: 100%;
+}
 
 .product-create{ 
-  padding-top: 20px;  
-  padding-bottom: 40px;
+  padding-top: 0px;  
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .pc-container{ 
   max-width: 761px;        
   margin: 0 auto;           
   padding: 0 16px;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .pc-title{ 
@@ -402,7 +410,7 @@ input::-webkit-inner-spin-button {
 .pc-thumb-grid{ 
   margin-top:10px; 
   display:grid; 
-  grid-template-columns:repeat(5,1fr); 
+  grid-template-columns:repeat(5,60px); 
   gap:10px; }
   
 .pc-thumb{
@@ -433,6 +441,8 @@ input::-webkit-inner-spin-button {
   display:flex; 
   justify-content:center; 
   margin-top: 46px; 
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
 }
 
 .pc-submit {
@@ -454,6 +464,7 @@ input::-webkit-inner-spin-button {
   border: none;
   border-radius: 12px;
   cursor: pointer;
+  margin-bottom: 0 !important;
 }
 
 .pc-submit:hover{ opacity:.92; }

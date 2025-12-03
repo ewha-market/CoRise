@@ -713,6 +713,16 @@ def mypage_sell():
         total=item_counts
     )
 
+from datetime import datetime
+
+@application.template_filter('datetimefilter')
+def datetimefilter(value):
+    try:
+        # Firebase timestamp(ms) → Python timestamp(s)
+        return datetime.fromtimestamp(value / 1000).strftime("%Y-%m-%d")
+    except:
+        return value
+
 #찜목록페이지(9.4)
 @application.route("/mypage_like")
 def mypage_like():

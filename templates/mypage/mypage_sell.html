@@ -21,7 +21,7 @@
 
             <div class="item-content1">
                 <div class="item-info1">
-                    <p class="seller1">판매자: {{ user_name }}</p>
+                    <p class="seller1">등록 날짜: {{ item.addDate | datetimefilter }}
                     <p class="item-name1">{{ item.name }}</p>
                     <p class="item-price1">{{ item.price }}원</p>
                 </div>
