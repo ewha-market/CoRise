@@ -81,6 +81,9 @@
   document.addEventListener('DOMContentLoaded', function () {
     const starBox = document.querySelector(".rvreg-stars");
     const ratingInput = document.getElementById("rating-input");
+    const titleInput  = document.getElementById("title");
+    const contentInput= document.getElementById("content");
+    const form        = document.querySelector(".reg-review-form");
 
     if (starBox && ratingInput) {
       const stars = starBox.querySelectorAll(".star");
@@ -166,6 +169,41 @@
         renderBoxes();
       });
     });
+
+    /* submit 검증 */
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        const rating  = Number(ratingInput.value || 0);
+        const title   = (titleInput.value || "").trim();
+        const content = (contentInput.value || "").trim();
+
+        if (!rating) {
+          e.preventDefault();
+          alert("별점을 선택해 주세요.");
+          return;
+        }
+
+        if (!title) {
+          e.preventDefault();
+          alert("리뷰 제목을 입력해 주세요.");
+          titleInput.focus();
+          return;
+        }
+
+        if (!content) {
+          e.preventDefault();
+          alert("리뷰 내용을 입력해 주세요.");
+          contentInput.focus();
+          return;
+        }
+
+        if (selectedFiles.length === 0) {
+          e.preventDefault();
+          alert("최소 1장의 사진을 등록해 주세요.");
+          return;
+        }
+      });
+    }
   });
 </script>
 

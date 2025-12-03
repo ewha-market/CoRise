@@ -25,42 +25,45 @@
         {{ data.review }} </p>
     </div>
 
+    {% set raw_imgs = data.img_path or [] %}
+    {% if raw_imgs is string %}
+      {% set imgs = [raw_imgs] %}
+    {% elif raw_imgs is sequence %}
+      {% set imgs = raw_imgs %}
+    {% else %}
+      {% set imgs = [] %}
+    {% endif %}
+
     <div class="rvdetail-right">
       <div class="rvdetail-img">
-          {% if data.img_path %}
-          {% if data.img_path is sequence and data.img_path is not string %}
-            {% set img = data.img_path[0] %}
-          {% else %}
-            {% set img = data.img_path %}
+          {% if imgs %}
+            <img
+              id="rvHeroImage"
+              src="{{ url_for('static', filename='images/' + imgs[0]) }}"
+              alt="{{ data.title }}"
+              width="350" height="350">
           {% endif %}
-
-          {% if img %}
-            <img src="{{ url_for('static', filename='images/' + img) }}"
-                 alt="{{ data.title }}"
-                 width="350" height="350">
-          {% endif %}
-        {% endif %}
       </div>
       <div class="rvdetail-thumb-row">
-        {% if data.img_path is sequence and data.img_path is not string %}
-          {% set thumbs = data.img_path[1:] %}
-        {% else %}
-          {% set thumbs = [] %}
-        {% endif %}
-
-        {% for i in range(4) %}
-          {% if thumbs|length > i %}
-            <div class="rvdetail-thumb">
-              <img src="{{ url_for('static', filename='images/' + thumbs[i]) }}"
-                   alt="{{ data.title }} thumbnail {{ i+1 }}">
-            </div>
-          {% else %}
-            <div class="rvdetail-thumb"></div>
-          {% endif %}
+        {% for img in imgs[:5] %}
+          <div class="rvdetail-thumb">
+            <img 
+              src="{{ url_for('static', filename='images/' + img) }}"
+              alt="{{ data.title }} thumbnail {{ loop.index }}"
+              class="rvdetail-thumb-img"
+              onclick="changeHero(this.src)">
+          </div>
         {% endfor %}
       </div>
     </div>
   </div>
 </div>
+
+<script>
+function changeHero(imageSrc) {
+    const heroImg = document.getElementById("rvHeroImage");
+    heroImg.src = imageSrc;
+  }
+</script>
 
 {% endblock section %}

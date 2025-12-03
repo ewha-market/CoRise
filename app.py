@@ -321,20 +321,22 @@ def reg_review():
 @application.route("/reviews")
 def view_review():
     page = request.args.get("page", 0, type=int)
-    order_param = request.args.get("order", "최신순")
-    rating_param = request.args.get("rating", "별점높은순")
+    sort_param = request.args.get("sort", "최신순")
     
     # 1. 정렬 기준 설정
     sort_key = 'timestamp'
     reverse = True
-    if rating_param == '별점낮은순':
-        sort_key = 'rate'
+    if sort_param == '최신순':
+        sort_key = 'timestamp'
+        reverse = True
+    elif sort_param == '오래된 순':
+        sort_key = 'timestamp'
         reverse = False
-    elif rating_param == '별점높은순':
+    elif sort_param == '별점높은순':
         sort_key = 'rate'
         reverse = True
-    elif order_param == '오래된 순':
-        sort_key = 'timestamp'
+    elif sort_param == '별점낮은순':
+        sort_key = 'rate'
         reverse = False
     
     # 2. DB에서 가져오기
@@ -395,7 +397,8 @@ def view_review():
         limit=per_page,
         page=page,
         page_count=int((item_counts + per_page - 1) / per_page), 
-        total=item_counts
+        total=item_counts,
+        sort=sort_param,
     )
     
 @application.route('/view_review_detail/<key>/')
@@ -420,19 +423,21 @@ def view_review_detail(key):
 @application.route("/reviews_by_item/<name>/")
 def view_review_by_item(name):
     page = request.args.get("page", 0, type=int)
-    order_param = request.args.get("order", "최신순")
-    rating_param = request.args.get("rating", "별점높은순")
+    sort_param = request.args.get("sort", "최신순")
 
     sort_key = 'timestamp'
     reverse = True
-    if rating_param == '별점낮은순':
-        sort_key = 'rate'
+    if sort_param == '최신순':
+        sort_key = 'timestamp'
+        reverse = True
+    elif sort_param == '오래된 순':
+        sort_key = 'timestamp'
         reverse = False
-    elif rating_param == '별점높은순':
+    elif sort_param == '별점높은순':
         sort_key = 'rate'
         reverse = True
-    elif order_param == '오래된 순':
-        sort_key = 'timestamp'
+    elif sort_param == '별점낮은순':
+        sort_key = 'rate'
         reverse = False
 
     all_reviews = DB.get_reviews(sort_key, reverse)
@@ -488,8 +493,7 @@ def view_review_by_item(name):
         total=item_counts,
         page=page,
         page_count=page_count,
-        order=order_param,
-        rating=rating_param,
+        sort=sort_param,
         avg_rating=avg_rating, 
     )
 
@@ -558,7 +562,6 @@ def check_nickname():
 #Mypage
 #----------------------------------------------------------------------------  
 
-# 12주차 좋아요 기능
 # 좋아요 기능 모두 <name> -> <item_id>로 변경, DB 호출 함수 변경
 @application.route('/show_heart/<item_id>/', methods=['GET'])
 def show_heart(item_id):
@@ -623,8 +626,6 @@ def mypage_buy():
     #페이지네이션
     page = request.args.get("page", 0, type=int)
     per_page = 3
-    #per_row = 3
-    #row_count = int(per_page / per_row)
     total = len(orders)
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
@@ -635,22 +636,8 @@ def mypage_buy():
     tot_count = len(data_paged)
     locals_data['data_0'] = data_paged
 
-    #for i in range(row_count):
-    #    start = i * per_row
-    #    end = (i + 1) * per_row
-
-    #    if i == row_count - 1 and tot_count % per_row != 0:
-    #        current_data = dict(data_list[start_idx + start:])
-    #    else:
-    #        current_data = dict(data_list[start_idx + start: start_idx + end])
-
-    #    locals_data[f'data_{i}'] = current_data
-    #작동 확인용  -> 프론트 구현 후 삭제
-    # print("=== mypage_buy: data_list ===")
-    # print(data_list)
     return render_template(
         "mypage/mypage_buy.html",
-        # data_0, data_1을 reviews.html에 row1, row2로 전달
         user_name=user_name,
         row1=locals_data.get('data_0', {}).items(), 
         row2=locals_data.get('data_1', {}).items(),
@@ -678,8 +665,6 @@ def mypage_sell():
     #페이지네이션
     page = request.args.get("page", 0, type=int)
     per_page = 3
-    #per_row = 3
-    #row_count = int(per_page / per_row)
     start_idx = per_page * page
     end_idx = per_page * (page + 1)
     item_counts = len(data)
@@ -688,22 +673,8 @@ def mypage_sell():
     locals_data = {}
     locals_data['data_0'] = data_paged
 
-    # for i in range(row_count):
-    #    start = i * per_row
-    #    end = (i + 1) * per_row
-
-    #    if i == row_count - 1 and tot_count % per_row != 0:
-    #        current_data = dict(data_list[start_idx + start:])
-    #    else:
-    #        current_data = dict(data_list[start_idx + start: start_idx + end])
-
-    #    locals_data[f'data_{i}'] = current_data
-    #작동 확인용  -> 프론트 구현 후 삭제
-    print("=== mypage_sell: data_list ===")
-    print(data_list)
     return render_template(
         "mypage/mypage_sell.html",
-        # data_0, data_1을 reviews.html에 row1, row2로 전달
         user_name=user_name,
         row1=locals_data.get('data_0', {}).items(), 
         row2=locals_data.get('data_1', {}).items(),
@@ -756,9 +727,7 @@ def mypage_like():
             current_data = dict(data_list[start_idx + start: start_idx + end])
 
         locals_data[f'data_{i}'] = current_data
-    #작동 확인용  -> 프론트 구현 후 삭제    
-    print("=== mypage_like: data_list ===")
-    print(data_list)
+
     return render_template(
         "mypage/mypage_like.html",
         # data_0, data_1을 reviews.html에 row1, row2로 전달

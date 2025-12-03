@@ -3,28 +3,22 @@
   rel="stylesheet"
   href="{{ url_for('static', filename='review_style.css') }}"
 />
-{% endblock head %} {% block section %}
+{% endblock head %} 
+{% block section %}
 <div class="rvall-top">
   <p class="rvall-count"><span class="rvall-total">{{ total }}</span> 개의 리뷰가 등록되었습니다!</p>
 
   <form class="rvall-sorts" method="get" action="/reviews">
     <label class="select-pill">
-      <select class="rvall-sort-cat" name="order" onchange="this.form.submit()">
-        <option value="최신순" {{ 'selected' if request.args.get('order','최신순') == '최신순' else '' }}>최신순</option>
-        <option value="오래된 순" {{ 'selected' if request.args.get('order')=='오래된 순' else '' }}>오래된 순</option>
+      {% set current_sort = request.args.get('sort', '최신순') %}
+      <select class="rvall-sort-cat" name="sort" onchange="this.form.submit()">
+        <option value="최신순"     {{ 'selected' if current_sort == '최신순' else '' }}>최신순</option>
+        <option value="오래된 순"   {{ 'selected' if current_sort == '오래된 순' else '' }}>오래된 순</option>
+        <option value="별점높은순" {{ 'selected' if current_sort == '별점높은순' else '' }}>별점높은순</option>
+        <option value="별점낮은순" {{ 'selected' if current_sort == '별점낮은순' else '' }}>별점낮은순</option>
       </select>
       <svg class="chev" width="22" height="16" viewBox="0 0 28 19" fill="none" aria-hidden="true">
         <path d="M13.2826 18.1387C13.4826 18.4042 13.8813 18.404 14.0814 18.1387L26.7621 1.30078C27.0102 0.97129 26.7751 0.5 26.3627 0.5H1.00134C0.589257 0.500359 0.354175 0.971424 0.601929 1.30078L13.2826 18.1387Z" fill="#FBFAF4" stroke="black"/>
-      </svg>
-    </label>
-
-    <label class="select-pill">
-      <select class="rvall-sort-cat" name="rating" onchange="this.form.submit()">
-        <option value="별점높은순" {{ 'selected' if request.args.get('rating','별점높은순')=='별점높은순' else '' }}>별점높은순</option>
-        <option value="별점낮은순" {{ 'selected' if request.args.get('rating')=='별점낮은순' else '' }} >별점낮은순</option>
-      </select>
-      <svg class="chev" width="22" height="16" viewBox="0 0 28 19" fill="none" aria-hidden="true">
-          <path d="M13.2826 18.1387C13.4826 18.4042 13.8813 18.404 14.0814 18.1387L26.7621 1.30078C27.0102 0.97129 26.7751 0.5 26.3627 0.5H1.00134C0.589257 0.500359 0.354175 0.971424 0.601929 1.30078L13.2826 18.1387Z" fill="#FBFAF4" stroke="black"/>
       </svg>
     </label>
   </form>
@@ -91,9 +85,13 @@
 
         <div class="rvall-review-title-section">
           <h3 class="rvall-review-title">{{ value.title }}</h3> <div class="rvall-rating">
-            {% for i in range(value.rate | int) %}
-            <span class="star">★</span>
-            {% endfor %}
+            {% set rating = (value.rate or value.rating or 0) | int %}
+                {% for i in range(rating) %}
+                  <span class="star star--filled">★</span>
+                {% endfor %}
+                {% for i in range(5 - rating) %}
+                  <span class="star star--empty">☆</span>
+                {% endfor %}
           </div>
         </div>
 
@@ -104,7 +102,12 @@
       </div>
 
       <div class="rvall-media-placeholder">
-          <img src="{{ url_for('static', filename='images/' + value.img_path) }}" width="140" height="200" alt="{{ key }}">
+        {% set img = value.img_path[0] if value.img_path is sequence and value.img_path is not string else value.img_path %}
+        {% if img %}
+          <img src="{{ url_for('static', filename='images/' + img) }}"
+               class="rvall-media-img"
+               alt="{{ key }}">
+        {% endif %}
       </div>
     </div>
     <hr class="rvall-divider" />
@@ -112,21 +115,23 @@
   {% endfor %}
 
   <nav class="pagination">
+    {% set current_sort = sort or request.args.get('sort', '최신순') %}
+
     {% if page > 0 %}
-      <a class="page-btn" href="{{ url_for('view_review', page=page-1) }}">&lsaquo;</a>
+      <a class="page-btn" href="{{ url_for('view_review', page=page-1, sort=current_sort) }}">&lsaquo;</a>
     {% else %}
       <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
     {% endif %}
 
     {% for i in range(page_count) %}
       <a class="page-number {% if i == page %}active{% endif %}" 
-        href="{{ url_for('view_review', page=i) }}">
+        href="{{ url_for('view_review', page=i, sort=current_sort) }}">
         {{ i + 1 }}
       </a>
     {% endfor %}
 
     {% if page < page_count - 1 %}
-      <a class="page-btn" href="{{ url_for('view_review', page=page+1) }}">&rsaquo;</a>
+      <a class="page-btn" href="{{ url_for('view_review', page=page+1, sort=current_sort) }}">&rsaquo;</a>
     {% else %}
       <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
     {% endif %}

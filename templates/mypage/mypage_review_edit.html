@@ -101,6 +101,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const starBox = document.querySelector('.rvreg-stars');
   const ratingInput = document.getElementById('rating-input');
+  const titleInput = document.getElementById('title');
+  const contentInput = document.getElementById('content');
 
   if (starBox && ratingInput) {
     const stars = Array.from(starBox.querySelectorAll('.star'));
@@ -128,16 +130,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('photos');
   const previewBoxes = Array.from(document.querySelectorAll('.photo-box'));
   const form = document.querySelector('.reg-review-form');
-  let selectedFiles = []; // 새로 업로드한 파일들만 관리
+  let selectedFiles = [];
 
-  // 현재 남아 있는 기존 이미지 개수
   const getExistingCount = () =>
     previewBoxes.reduce((cnt, box) => {
       const img = box.querySelector('img[data-existing="1"]');
       return cnt + (img ? 1 : 0);
     }, 0);
 
-  // file input 의 FileList 를 selectedFiles 와 동기화
   const syncFileInput = () => {
     const dt = new DataTransfer();
     selectedFiles.forEach(f => dt.items.add(f));
@@ -146,30 +146,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 새로 업로드한 이미지들을 preview 에 다시 그리기
   const renderNewPreviews = () => {
-    // 먼저 기존의 "새 이미지" 프리뷰들 제거 (기존 이미지(data-existing)는 건들지 않음)
     previewBoxes.forEach(box => {
       const newImg = box.querySelector('img[data-new="1"]');
       if (newImg) newImg.remove();
     });
 
-    // img 태그가 전혀 없는 박스들만 새 이미지 채우기용으로 사용
     const emptyBoxes = previewBoxes.filter(box => !box.querySelector('img'));
 
     selectedFiles.forEach((file, idx) => {
-      if (!emptyBoxes[idx]) return; // 빈 칸이 더 이상 없으면 무시
+      if (!emptyBoxes[idx]) return;
 
       const img = document.createElement('img');
       img.alt = '새 리뷰 이미지';
       img.dataset.new = '1';
-      img.dataset.index = idx; // selectedFiles 의 인덱스
+      img.dataset.index = idx;
       img.src = URL.createObjectURL(file);
-      img.onload = () => URL.revokeObjectURL(img.src); // 메모리 정리용(optional)
+      img.onload = () => URL.revokeObjectURL(img.src);
 
       emptyBoxes[idx].appendChild(img);
     });
   };
 
-  // 파일 선택 시
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
       const files = Array.from(e.target.files || []);
@@ -232,9 +229,37 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
-  
+
   if (form) {
     form.addEventListener('submit', (e) => {
+      const rating  = Number(ratingInput.value || 0);
+      const title   = titleInput.value.trim();
+      const content = contentInput.value.trim();
+
+      // 별점 체크
+      if (!rating) {
+        e.preventDefault();
+        alert('별점을 선택해 주세요.');
+        return;
+      }
+
+      // 제목 체크
+      if (!title) {
+        e.preventDefault();
+        alert('리뷰 제목을 입력해 주세요.');
+        titleInput.focus();
+        return;
+      }
+
+      // 내용 체크
+      if (!content) {
+        e.preventDefault();
+        alert('리뷰 내용을 입력해 주세요.');
+        contentInput.focus();
+        return;
+      }
+
+      // 사진 개수 체크
       const existingCount = getExistingCount();
       const newCount = selectedFiles.length;
       const total = existingCount + newCount;
@@ -242,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (total === 0) {
         e.preventDefault();
         alert('최소 1장의 사진을 등록해야 리뷰를 수정할 수 있습니다.');
+        return;
       }
     });
   }

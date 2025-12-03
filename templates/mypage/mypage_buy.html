@@ -12,7 +12,6 @@
     <!-- 구매 내역 카드 리스트 -->
     <div class="purchase-list">
 
-        <!-- 카드 -->
         {% for order_id, order in row1 %}
         <div class="purchase-card
             {% if order.is_deleted %} deleted{% endif %}"
@@ -41,12 +40,22 @@
                     </p>
                     <p class="item-price">{{ order.item_price }}원</p>
                 </div>
-                
-                <button type="button" 
-                        onclick="event.stopPropagation(); location.href='{{ url_for('reg_review_init', item_id=order.productID) }}'" 
-                        class="review-btn">
-                    리뷰 작성
-                </button>
+                {% if order.is_deleted %}
+                    <!-- 상품 삭제된 경우: 리뷰 버튼 비활성화 -->
+                    <button type="button"
+                            class="review-btn review-btn--disabled"
+                            disabled
+                            onclick="event.stopPropagation();">
+                        리뷰 작성 불가
+                    </button>
+                {% else %}
+                    <button type="button" 
+                            onclick="event.stopPropagation(); 
+                            location.href='{{ url_for('reg_review_init', item_id=order.productID) }}'" 
+                            class="review-btn">
+                        리뷰 작성
+                    </button>
+                {% endif %}
             </div>
         </div>
         {% endfor %}

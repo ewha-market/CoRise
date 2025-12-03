@@ -14,15 +14,18 @@
   </div>
   
   <form class="rvbyitem-sorts" method="get" action="{{ url_for('view_review_by_item', name=product_name) }}">
-    <select class="rvbyitem-sort-cat" name="order" onchange="this.form.submit()">
-      <option value="최신순"  {{ 'selected' if order=='최신순' else '' }} >최신순</option>
-      <option value="오래된 순" {{ 'selected' if order=='오래된 순' else '' }} >오래된 순</option>
-    </select>
-
-    <select class="rvbyitem-sort-cat" name="rating" onchange="this.form.submit()">
-      <option value="별점높은순" {{ 'selected' if rating=='별점높은순' else '' }} >별점높은순</option>
-      <option value="별점낮은순"  {{ 'selected' if rating=='별점낮은순' else '' }} >별점낮은순</option>
-    </select>
+    <label class="select-pill">
+      {% set current_sort = request.args.get('sort', '최신순') %}
+      <select class="rvall-sort-cat" name="sort" onchange="this.form.submit()">
+        <option value="최신순"     {{ 'selected' if current_sort == '최신순' else '' }}>최신순</option>
+        <option value="오래된 순"   {{ 'selected' if current_sort == '오래된 순' else '' }}>오래된 순</option>
+        <option value="별점높은순" {{ 'selected' if current_sort == '별점높은순' else '' }}>별점높은순</option>
+        <option value="별점낮은순" {{ 'selected' if current_sort == '별점낮은순' else '' }}>별점낮은순</option>
+      </select>
+      <svg class="chev" width="22" height="16" viewBox="0 0 28 19" fill="none" aria-hidden="true">
+        <path d="M13.2826 18.1387C13.4826 18.4042 13.8813 18.404 14.0814 18.1387L26.7621 1.30078C27.0102 0.97129 26.7751 0.5 26.3627 0.5H1.00134C0.589257 0.500359 0.354175 0.971424 0.601929 1.30078L13.2826 18.1387Z" fill="#FBFAF4" stroke="black"/>
+      </svg>
+    </label>
   </form>
 </div>
 
@@ -78,21 +81,21 @@
   <nav class="pagination">
     {% if page > 0 %}
       <a class="page-btn"
-         href="{{ url_for('view_review_by_item', name=product_name, page=page-1, order=order, rating=rating) }}">&lsaquo;</a>
+         href="{{ url_for('view_review_by_item', name=product_name, page=page-1, sort=current_sort) }}">&lsaquo;</a>
     {% else %}
       <span class="page-btn" style="opacity:0.4; pointer-events:none;">&lsaquo;</span>
     {% endif %}
 
     {% for i in range(page_count) %}
       <a class="page-number {% if i == page %}active{% endif %}"
-         href="{{ url_for('view_review_by_item', name=product_name, page=i, order=order, rating=rating) }}">
+         href="{{ url_for('view_review_by_item', name=product_name, page=i, sort=current_sort) }}">
         {{ i + 1 }}
       </a>
     {% endfor %}
 
     {% if page < page_count - 1 %}
       <a class="page-btn"
-         href="{{ url_for('view_review_by_item', name=product_name, page=page+1, order=order, rating=rating) }}">&rsaquo;</a>
+         href="{{ url_for('view_review_by_item', name=product_name, page=page+1, sort=current_sort) }}">&rsaquo;</a>
     {% else %}
       <span class="page-btn" style="opacity:0.4; pointer-events:none;">&rsaquo;</span>
     {% endif %}
