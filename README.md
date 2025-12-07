@@ -42,11 +42,33 @@
 ```     
 
 ## 4. 기술 블로그
+[![Velog - CoRise 기술 블로그](https://img.shields.io/badge/Velog-CoRise%20%EA%B8%B0%EC%88%A0%20%EB%B8%94%EB%A1%9C%EA%B7%B8-20C997?style=for-the-badge&logo=velog&logoColor=white)](https://velog.io/@corise/posts)
 
-https://velog.io/@corise/posts
 
 
-## 5. 구성 화면
+## 5. 실행 방법
+
+**Step 1. 레포지토리 클론**
+
+   ```bash
+   git clone https://github.com/ewha-market/CoRise.git
+   cd CoRise
+   ```
+
+**Step 2. 가상 환경 설정**
+
+아래 가이드를 참고 👉 [![Velog - Anaconda/Flask 환경 설정 가이드](https://img.shields.io/badge/Velog-Anaconda%2FFlask%20환경%20설정-20C997?style=for-the-badge&logo=velog&logoColor=white)](https://velog.io/@corise/%EA%B0%80%EC%9D%B4%EB%93%9C-Anaconda-Flask-%ED%99%98%EA%B2%BD-%EC%84%A4%EC%A0%95)
+
+
+**Step 3. 필요 패키지 설치 (Flask, Firebase)**
+
+**Step 4. 서버 실행**
+   ```bash
+   flask --debug run
+   ```
+
+
+## 6. 구성 화면
 
 ![슬라이드 1](static/slide/1.png)
 
